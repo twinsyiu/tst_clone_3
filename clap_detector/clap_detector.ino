@@ -15,12 +15,6 @@
 const byte ledPin = 5;
 const byte interruptPin = 2;
 
-// the array is temporary to demonstrate the code works, can be refined
-const byte arrylen = 100;
-unsigned long ts[arrylen];
-int val[arrylen];
-int arry_idx = 0;
-
 unsigned long first_rise_ts = 0;
 unsigned long last_fall_ts = 0;
 
@@ -35,13 +29,12 @@ void setup() {
 
   // using CHANGE to detect both RISING & FALLING edge
   attachInterrupt(digitalPinToInterrupt(interruptPin), log_chg, CHANGE);
-//  attachInterrupt(digitalPinToInterrupt(interruptPin), blink, RISING);
 
   // turn on test LED
   digitalWrite(ledPin, HIGH);
   Serial.println("LED_ON");
 
-  reset_ts_arry();
+  reset_ts();
   
   Serial.println("setup() - nearly end");
   delay(2000);
@@ -56,7 +49,8 @@ void loop() {
   //unsigned long last_clap_fall_ts = 0;
   //unsigned int clap_cnt = 0;
 
-  if (arry_idx)
+  //if (arry_idx)
+  if (first_rise_ts)
   {
     noInterrupts();
     curr_us = micros();
@@ -77,18 +71,12 @@ void loop() {
         Serial.print(first_rise_ts);
         Serial.print(" = ");
         Serial.println(last_fall_ts - first_rise_ts);
-  
-        Serial.print("arry_idx = ");
-        Serial.println(arry_idx);
 */
-        //digitalWrite(ledPin, HIGH);
-        //delay(500);
-//        print_ts_arry();
         clap_cnt++;
         last_clap_fall_ts = last_fall_ts;
         digitalWrite(ledPin, HIGH);
       }
-      reset_ts_arry();
+      reset_ts();
     }
     interrupts();
   }
@@ -114,16 +102,12 @@ void loop() {
       // print ONLY if first_rise_ts exist, ie not just a last_fall_ts detected
       Serial.print("clap count = ");
       Serial.println(clap_cnt);
-//      Serial.println("+++++++++++++++++++++++++++++++++++++++++++++++");
       Serial.println();
       digitalWrite(ledPin, LOW);
-      //delay(200);
       clap_cnt = 0;
       last_clap_fall_ts = 0;
     }
   }
-
-  //digitalWrite(ledPin, LOW);
 }
 
 void log_chg() {
@@ -132,13 +116,6 @@ void log_chg() {
 
   curr_us = micros();
   curr_val = digitalRead(interruptPin);
-
-  if (arry_idx < arrylen)
-  {
-    ts[arry_idx] = curr_us;
-    val[arry_idx] = curr_val;
-    arry_idx++;
-  }
 
 //  if (first_rise_ts == 0)  <<-- this doesn't work
   if ((first_rise_ts == 0) && (curr_val == HIGH))
@@ -151,34 +128,8 @@ void log_chg() {
   }
 }
 
-void print_ts_arry() 
+void reset_ts() 
 {
-  int i = 0;
-  while (i < arry_idx)
-  {
-    /*
-    Serial.print(i);
-    Serial.print(" ");
-    Serial.print(val[i]);
-    Serial.print(" ");
-    Serial.println(ts[i]);
-    */
-    Serial.print(".");
-    i++;
-  }
-    Serial.println("^");
-}
-
-void reset_ts_arry() 
-{
-  int i = arrylen - 1;
-  while (i)
-  {
-    ts[i] = 0;
-    val[i] = 0;
-    i--;
-  }
-  arry_idx = 0;
   first_rise_ts = 0;
   last_fall_ts = 0;
 }
