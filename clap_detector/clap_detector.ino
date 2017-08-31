@@ -49,7 +49,6 @@ void loop() {
   //unsigned long last_clap_fall_ts = 0;
   //unsigned int clap_cnt = 0;
 
-  //if (arry_idx)
   if (first_rise_ts)
   {
     noInterrupts();
@@ -74,11 +73,14 @@ void loop() {
 */
         clap_cnt++;
         last_clap_fall_ts = last_fall_ts;
-        digitalWrite(ledPin, HIGH);
       }
       reset_ts();
     }
     interrupts();
+    if (clap_cnt)
+    {
+      digitalWrite(ledPin, HIGH);
+    }
   }
 
   if (clap_cnt)
@@ -122,7 +124,7 @@ void log_chg() {
   {
      last_fall_ts = first_rise_ts = curr_us;
   }
-  if ((curr_us - last_fall_ts) && (curr_val == LOW))
+  if (first_rise_ts && (curr_us - last_fall_ts) && (curr_val == LOW))
   {
      last_fall_ts = curr_us;
   }
