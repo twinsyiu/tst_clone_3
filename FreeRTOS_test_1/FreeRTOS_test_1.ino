@@ -1,12 +1,14 @@
-#include <Arduino_FreeRTOS.h>
+#include <Arduino_FreeRTOS.h>   // use FreeRTOS, install lib required
 #include <semphr.h>  // add the FreeRTOS functions for Semaphores (or Flags).
 
-#include <Wire.h> 
-#include <LiquidCrystal_I2C.h>
+#include <SPI.h>    // use SPI library for MicroMag
+#include <MicroMag.h> // use MicroMag, install lib required
+
+#include <Wire.h>   // use I2C library
+#include <LiquidCrystal_I2C.h> // // use LiquidCrystal_I2C FC-113, install lib required
+
+#define SERIAL_DBG_ON   // enable serial monitor output debug message
 /**********************************************************/
-char array1[]=" SunFounder               "; //the string to print on the LCD
-char array2[]="hello, world!             "; //the string to print on the LCD
-int tim = 500; //the value of delay time
 // initialize the library with the numbers of the interface pins
 LiquidCrystal_I2C lcd(0x27,16,2); // set the LCD address to 0x27 for a 16 chars and 2 line display
 
@@ -14,9 +16,30 @@ LiquidCrystal_I2C lcd(0x27,16,2); // set the LCD address to 0x27 for a 16 chars 
 // It will be used to ensure only only one Task is accessing this resource at any time.
 SemaphoreHandle_t xSerialSemaphore;
 
+// MicroMag Pins definition
+const uint8_t mmSsPin = 10; // This is the chip select pin on the MM3
+const uint8_t mmDrdyPin = 9;
+const uint8_t mmResetPin = 8;
+// Change this to suit your MicroMag version.
+const uint8_t model = 3;
+
+int16_t data[model];
+
+// UltraSound module
+const int trigPin = 6; 
+const int echoPin = 7;
+
+float duration, distance; 
+
+
 // define two Tasks for DigitalRead & AnalogRead
-void TaskDigitalRead( void *pvParameters );
-void TaskAnalogRead( void *pvParameters );
+void TaskUltraSoundRead( void *pvParameters );
+void TaskMagnetRead( void *pvParameters );
+void TaskDispLCDDummy( void *pvParameters );
+
+// Create a MicroMag object
+MicroMag MM = MicroMag::MicroMag3(mmSsPin, mmDrdyPin, mmResetPin);
+
 
 // the setup function runs once when you press reset or power the board
 void setup() {
@@ -24,6 +47,14 @@ void setup() {
   // initialize serial communication at 9600 bits per second:
   Serial.begin(9600);
 
+  pinMode(trigPin, OUTPUT); 
+  pinMode(echoPin, INPUT); 
+
+  if (MM.begin() != 0) {
+    Serial.println("Could not initialise MicroMag");
+    while (1)
+      ; // no point in continuing
+  }
   lcd.init(); //initialize the lcd
   lcd.backlight(); //open the backlight 
 
@@ -39,7 +70,7 @@ void setup() {
 
   // Now set up two Tasks to run independently.
   xTaskCreate(
-    TaskDigitalRead
+    TaskUltraSoundRead
     ,  (const portCHAR *)"DigitalRead"  // A name just for humans
     ,  128  // This stack size can be checked & adjusted by reading the Stack Highwater
     ,  NULL
@@ -47,8 +78,8 @@ void setup() {
     ,  NULL );
 
   xTaskCreate(
-    TaskAnalogRead
-    ,  (const portCHAR *) "AnalogRead"
+    TaskMagnetRead
+    ,  (const portCHAR *) "TaskMagnetRead"
     ,  128  // Stack size
     ,  NULL
     ,  1  // Priority
@@ -74,50 +105,68 @@ void loop()
 /*---------------------- Tasks ---------------------*/
 /*--------------------------------------------------*/
 
-void TaskDigitalRead( void *pvParameters __attribute__((unused)) )  // This is a Task.
+void TaskUltraSoundRead( void *pvParameters __attribute__((unused)) )  // This is a Task.
 {
-  /*
-    DigitalReadSerial
-    Reads a digital input on pin 2, prints the result to the serial monitor
-
-    This example code is in the public domain.
-  */
-
-  // digital pin 2 has a pushbutton attached to it. Give it a name:
-  uint8_t pushButton = 2;
-
-  // make the pushbutton's pin an input:
-  pinMode(pushButton, INPUT);
-
   for (;;) // A Task shall never return or exit.
   {
-    // read the input pin:
-    int buttonState = digitalRead(pushButton);
-
-    // See if we can obtain or "Take" the Serial Semaphore.
-    // If the semaphore is not available, wait 5 ticks of the Scheduler to see if it becomes free.
-    if ( xSemaphoreTake( xSerialSemaphore, ( TickType_t ) 5 ) == pdTRUE )
-    {
-      // We were able to obtain or "Take" the semaphore and can now access the shared resource.
-      // We want to have the Serial Port for us alone, as it takes some time to print,
-      // so we don't want it getting stolen during the middle of a conversion.
-      // print out the state of the button:
-      Serial.println(buttonState);
-
-      xSemaphoreGive( xSerialSemaphore ); // Now free or "Give" the Serial Port for others.
-    }
-
-    vTaskDelay(1);  // one tick delay (15ms) in between reads for stability
+    // put your main code here, to run repeatedly:
+    digitalWrite(trigPin, LOW); 
+    delayMicroseconds(2); 
+    digitalWrite(trigPin, HIGH); 
+    delayMicroseconds(10); 
+    digitalWrite(trigPin, LOW); 
+    
+    duration = pulseIn(echoPin, HIGH); 
+    
+    distance = (duration*.0343)/2; 
+/*    
+    Serial.print("Distance: "); 
+    Serial.print(distance); 
+    Serial.println(" cm"); 
+    delay(1000); 
+*/
+    //vTaskDelay(1);  // one tick delay (15ms) in between reads for stability
+    vTaskDelay(200 / portTICK_PERIOD_MS);  // nof tick delay (200ms)
   }
 }
 
-void TaskAnalogRead( void *pvParameters __attribute__((unused)) )  // This is a Task.
+void TaskMagnetRead( void *pvParameters __attribute__((unused)) )  // This is a Task.
 {
 
   for (;;)
   {
-    // read the input on analog pin 0:
-    int sensorValue = analogRead(A0);
+    double total = 0.0; // total field value
+    for (uint8_t axis = 0; axis < model; ++axis) 
+    {
+      int8_t r;
+      if ((r = MM.read(axis, MM_PERIOD_4096, data[axis])) == 0) 
+      {
+        if (axis)
+      #ifdef SERIAL_DBG_ON
+        Serial.print("   ");
+        Serial.print(char('X' + axis));
+        Serial.print(" = ");
+        Serial.print(data[axis]);
+      #endif
+        total += sqrt(double(data[axis]) * data[axis]);
+      }
+      else 
+      {
+      #ifdef SERIAL_DBG_ON
+        Serial.print("Cannot read from ");
+        Serial.print(char('X' + axis));
+        Serial.print("axis: ");
+        Serial.print(r, DEC);
+      #endif
+      }
+    }
+    #ifdef SERIAL_DBG_ON
+    Serial.print("   Total = ");
+    Serial.println(total);
+    #endif
+    
+    //delay(2000);
+    vTaskDelay(250 / portTICK_PERIOD_MS);  // nof tick delay (250ms)
 
     // See if we can obtain or "Take" the Serial Semaphore.
     // If the semaphore is not available, wait 5 ticks of the Scheduler to see if it becomes free.
@@ -127,7 +176,7 @@ void TaskAnalogRead( void *pvParameters __attribute__((unused)) )  // This is a 
       // We want to have the Serial Port for us alone, as it takes some time to print,
       // so we don't want it getting stolen during the middle of a conversion.
       // print out the value you read:
-      Serial.println(sensorValue);
+//      Serial.println(sensorValue);
 
       xSemaphoreGive( xSerialSemaphore ); // Now free or "Give" the Serial Port for others.
     }
@@ -138,22 +187,47 @@ void TaskAnalogRead( void *pvParameters __attribute__((unused)) )  // This is a 
 
 void TaskDispLCDDummy( void *pvParameters __attribute__((unused)) )  // This is a Task. 
 {
-  lcd.setCursor(15,0); // set the cursor to column 15, line 0
-  for (int positionCounter1 = 0; positionCounter1 < 26; positionCounter1++)
+  int i = -100;
+  for (;;)
   {
-    lcd.scrollDisplayLeft(); //Scrolls the contents of the display one space to the left.
-    lcd.print(array1[positionCounter1]); // Print a message to the LCD.
-    //delay(tim); //wait for 250 microseconds
-    vTaskDelay(250 / portTICK_PERIOD_MS);  // nof tick delay (250ms)
+    for (int positionCounter1 = 0; positionCounter1 < 26; positionCounter1++)
+    {
+      //lcd.scrollDisplayLeft(); //Scrolls the contents of the display one space to the left.
+      //lcd.print(array1[positionCounter1]); // Print a message to the LCD.
+      for (i = -100; i <= 100; i++)
+      {
+        lcd.setCursor(0,0); // set the cursor to column 15, line 0
+        lcd.print(distance); // Print a message to the LCD.
+        
+        lcd.setCursor(8,0); // set the cursor to column 15, line 0
+        lcd.print("X="); // Print a message to the LCD.
+        lcd.setCursor(10,0); // set the cursor to column 15, line 0
+        lcd.print(data[0]); // Print a message to the LCD.
+        
+        lcd.setCursor(0,1); // set the cursor to column 15, line 0
+        lcd.print("Y="); // Print a message to the LCD.
+        lcd.setCursor(2,1); // set the cursor to column 15, line 0
+        lcd.print(data[1]); // Print a message to the LCD.
+        
+        lcd.setCursor(8,1); // set the cursor to column 15, line 0
+        lcd.print("Z="); // Print a message to the LCD.
+        lcd.setCursor(10,1); // set the cursor to column 15, line 0
+        lcd.print(data[2]); // Print a message to the LCD.
+        
+        vTaskDelay(150 / portTICK_PERIOD_MS);  // nof tick delay (150ms)
+        lcd.clear(); //Clears the LCD screen and positions the cursor in the upper-left  corner.
+      }
+    }
+/*
+    lcd.setCursor(15,1); // set the cursor to column 15, line 1
+    for (int positionCounter = 0; positionCounter < 26; positionCounter++)
+    {
+      lcd.scrollDisplayLeft(); //Scrolls the contents of the display one space to the left.
+      lcd.print(array2[positionCounter]); // Print a message to the LCD.
+      //delay(tim); //wait for 250 microseconds
+      vTaskDelay(250 / portTICK_PERIOD_MS);  // nof tick delay (250ms)
+    }
+    lcd.clear(); //Clears the LCD screen and positions the cursor in the upper-left corner.
+*/
   }
-  lcd.clear(); //Clears the LCD screen and positions the cursor in the upper-left  corner.
-  lcd.setCursor(15,1); // set the cursor to column 15, line 1
-  for (int positionCounter = 0; positionCounter < 26; positionCounter++)
-  {
-    lcd.scrollDisplayLeft(); //Scrolls the contents of the display one space to the left.
-    lcd.print(array2[positionCounter]); // Print a message to the LCD.
-    //delay(tim); //wait for 250 microseconds
-    vTaskDelay(250 / portTICK_PERIOD_MS);  // nof tick delay (250ms)
-  }
-  lcd.clear(); //Clears the LCD screen and positions the cursor in the upper-left corner.
 }
