@@ -12,7 +12,6 @@ bool clap_valid_f = false;
 unsigned int clap_valid_cnt = 0;
 
 void TaskClapDetect( void *pvParameters );
-//void TaskClapDetect( void *pvParameters __attribute__((unused)) );  // This is a Task.
 void TaskClapDetect_init( void );
 
 #endif

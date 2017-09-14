@@ -2,7 +2,7 @@
 #include "ClapDetect.h"
 
 #ifdef SERIAL_DBG_ON    
-//#undef SERIAL_DBG_ON    
+#undef SERIAL_DBG_ON    
 #endif
 
 #define CLAPSTAT_IDLE     0
@@ -119,10 +119,10 @@ void TaskClapDetect( void *pvParameters __attribute__((unused)) )  // This is a 
           clap_valid_cnt = clap_cnt;
           clap_cnt = 0;
           clap_state = CLAPSTAT_IDLE;
-//#ifdef SERIAL_DBG_ON    
+#ifdef SERIAL_DBG_ON    
           Serial.print("  clap_valid_cnt: "); 
           Serial.println(clap_valid_cnt); 
-///#endif
+#endif
           RGB_LED_set(colour_arry[constrain(clap_valid_cnt,0,4)]);
         }
         vTaskDelay(1);  // nof tick delay (15ms)
