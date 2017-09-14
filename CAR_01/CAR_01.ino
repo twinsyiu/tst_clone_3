@@ -37,6 +37,19 @@ void setup() {
   TaskClapDetect_init();
   Serial.println("TaskClapDetect: CREATED"); 
   // Now the Task scheduler, which takes over control of scheduling individual Tasks, is automatically started.
+
+  xTaskCreate(
+    TaskCommander
+    ,  (const portCHAR *) "TaskCommander"
+    ,  128  // Stack size
+    ,  NULL
+    ,  1  // Priority
+    ,  NULL );
+  
+  TaskCommander_init();
+  Serial.println("TaskCommander: CREATED"); 
+  // Now the Task scheduler, which takes over control of scheduling individual Tasks, is automatically started.
+
 }
 
 void loop()

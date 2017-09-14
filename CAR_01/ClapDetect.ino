@@ -123,7 +123,6 @@ void TaskClapDetect( void *pvParameters __attribute__((unused)) )  // This is a 
           Serial.print("  clap_valid_cnt: "); 
           Serial.println(clap_valid_cnt); 
 #endif
-          RGB_LED_set(colour_arry[constrain(clap_valid_cnt,0,4)]);
         }
         vTaskDelay(1);  // nof tick delay (15ms)
         break;
