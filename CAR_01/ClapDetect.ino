@@ -5,9 +5,9 @@
 #undef SERIAL_DBG_ON    
 #endif
 
-#define CLAPSTAT_IDLE     0
+#define CLAPSTAT_IDLE         0
 #define CLAPSTAT_DEBOUNCE     1
-#define CLAPSTAT_DETECTED     2        // prev clap detected, clap pin LOWwaiting for the next 
+#define CLAPSTAT_DETECTED     2        // prev clap detected, clap pin LOW waiting for the next 
 
 void TaskClapDetect_init( void )
 {
@@ -45,7 +45,7 @@ void TaskClapDetect( void *pvParameters __attribute__((unused)) )  // This is a 
 #ifdef SERIAL_DBG_ON    
           Serial.println("IDLE "); 
 #endif
-          vTaskDelay(1);  // one tick delay (15ms) in between reads for stability
+          vTaskDelay(1);  // one tick delay (15ms)
         }
         break;
       case CLAPSTAT_DEBOUNCE:
@@ -131,7 +131,6 @@ void TaskClapDetect( void *pvParameters __attribute__((unused)) )  // This is a 
     }
   }
 }
-
 
 void log_chg() {
   // set clap_flag if it is not set, it will be cleared in the clap task

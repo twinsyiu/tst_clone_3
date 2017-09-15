@@ -14,7 +14,7 @@ void setup() {
   // initialize serial communication at 9600 bits per second:
   Serial.begin(9600);
 
-  // Now set up two Tasks to run independently.
+  // Now set up Tasks to run independently.
   xTaskCreate(
     TaskUltraSoundRead
     ,  (const portCHAR *)"TaskUltraSoundRead"  // A name just for humans
@@ -22,7 +22,6 @@ void setup() {
     ,  NULL
     ,  2  // Priority, with 1 being the highest, and 4 being the lowest.
     ,  NULL );
-    
   TaskUltraSound_Init();
   Serial.println("TaskUltraSoundRead: CREATED"); 
   
@@ -33,10 +32,8 @@ void setup() {
     ,  NULL
     ,  1  // Priority
     ,  NULL );
-  
   TaskClapDetect_init();
   Serial.println("TaskClapDetect: CREATED"); 
-  // Now the Task scheduler, which takes over control of scheduling individual Tasks, is automatically started.
 
   xTaskCreate(
     TaskCommander
@@ -45,9 +42,19 @@ void setup() {
     ,  NULL
     ,  1  // Priority
     ,  NULL );
-  
   TaskCommander_init();
   Serial.println("TaskCommander: CREATED"); 
+
+  xTaskCreate(
+    TaskMotionCtrl
+    ,  (const portCHAR *) "TaskMotionCtrl"
+    ,  128  // Stack size
+    ,  NULL
+    ,  1  // Priority
+    ,  NULL );
+  
+  TaskMotionCtrl_init();
+  Serial.println("TaskMotionCtrl: CREATED"); 
   // Now the Task scheduler, which takes over control of scheduling individual Tasks, is automatically started.
 
 }
