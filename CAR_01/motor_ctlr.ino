@@ -10,15 +10,17 @@ void motor_drive( int L1, int L2,int enA_L, int R1, int R2, int enB_R)
   
   // this function will run the motors in both directions at a fixed speed
   // turn on motor A
-  digitalWrite(in1, L1);
-  digitalWrite(in2, L2);
+  //digitalWrite(in1, L1);
+  analogWrite(in1, L1);
+  digitalWrite(in2, L2);    //  Dir
   // set speed to enA_L out of possible range 0~255
-  analogWrite(enA, enA_L);
+  //analogWrite(enA, enA_L);
   // turn on motor B
-  digitalWrite(in3, R1);
-  digitalWrite(in4, R2);
+  digitalWrite(in3, R1);    // Dir
+  //digitalWrite(in4, R2);
+  analogWrite(in4, R2);
   // set speed to enB_R out of possible range 0~255
-  analogWrite(enB, enB_R); 
+  //analogWrite(enB, enB_R); 
 }
 
 void motor_forward( unsigned int PWM )

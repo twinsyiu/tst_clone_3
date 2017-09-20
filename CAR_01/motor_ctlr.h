@@ -3,13 +3,14 @@
 
 // connect motor controller pins to Arduino digital pins
 // motor one
-const byte enA = 6;
-const byte in1 = 8;
-const byte in2 = 7;
+//const byte enA = 6;
+//const byte in1 = 8;
+const byte in1 = 6;     // Speed
+const byte in2 = 7;     // Dir
 // motor two
-const byte enB = 3;
-const byte in3 = 4;
-const byte in4 = 5;
+//const byte enB = 3;
+const byte in3 = 4;     // Speed 
+const byte in4 = 5;     // Dir
 
 void motor_stop( void );
 void motor_reverse( unsigned int PWM );
