@@ -1,4 +1,5 @@
 #include <Arduino_FreeRTOS.h>   // use FreeRTOS, install lib required
+#include "queue.h"
 #include "ClapDetect.h"
 
 #ifdef SERIAL_DBG_ON    
@@ -13,6 +14,14 @@ void TaskClapDetect_init( void )
 {
   // using RISING edge on sound level sensor
   attachInterrupt(digitalPinToInterrupt(interruptPin), log_chg, RISING);
+/*
+  qu_clap = xQueueCreate( 10, sizeof( int ) );
+ 
+  if(qu_clap == NULL)
+  {
+    Serial.println("Error creating the queue");
+  }
+*/
 }
 
 void TaskClapDetect( void *pvParameters __attribute__((unused)) )  // This is a Task.
@@ -117,6 +126,8 @@ void TaskClapDetect( void *pvParameters __attribute__((unused)) )  // This is a 
         {
           clap_valid_f = true;        // this flag is like a semaphore, user took the valid_cnt should clear this flag
           clap_valid_cnt = clap_cnt;
+xQueueSend(qu_clap, &clap_valid_cnt, 10); // portMAX_DELAY
+
           clap_cnt = 0;
           clap_state = CLAPSTAT_IDLE;
 #ifdef SERIAL_DBG_ON    

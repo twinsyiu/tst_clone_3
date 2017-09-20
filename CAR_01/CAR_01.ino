@@ -26,8 +26,8 @@ void setup() {
   Serial.println("TaskUltraSoundRead: CREATED"); 
   
   xTaskCreate(
-    TaskClapDetect
-    ,  (const portCHAR *) "TaskClapDetect"
+    TaskClapDetect 
+    ,  (const portCHAR *) "TaskClapDetect" 
     ,  128  // Stack size
     ,  NULL
     ,  1  // Priority
