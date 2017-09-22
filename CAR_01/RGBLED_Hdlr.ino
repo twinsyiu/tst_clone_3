@@ -3,7 +3,7 @@
 
 // NOTE : ----------------------VVVVVVVVVV
 // please activate the following #include for MY's board
-//#define MY_ACTIVE_LOW_RGB_LED
+#define MY_ACTIVE_LOW_RGB_LED
 
 #include "RGBLED_Hdlr.h"
 

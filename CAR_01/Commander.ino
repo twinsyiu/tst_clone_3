@@ -12,6 +12,7 @@
 
 #define MOTION_STAT_HALT          0
 #define MOTION_STAT_MOVING_FWD    1
+#define MOTION_STAT_MOVING_RVD    2
 
 
 unsigned int clap_cmd = 0;
@@ -38,20 +39,6 @@ void TaskCommander( void *pvParameters __attribute__((unused)) )  // This is a T
     switch (cmdr_state)
     {
       case CMDRSTAT_STDBY:
-      /*
-        if ( pdTRUE == xQueueReceive(qu_clap, &clap_cmd, 10) )    // 10 instead of "portMAX_DELAY", it will wait indefinitely
-        {
-          Serial.print("queue qu_clap PENDING clap_cmd : ");
-          Serial.println(clap_cmd);
-          // display RGB
-          RGB_LED_set(colour_arry[constrain(clap_valid_cnt,0,4)]);
-          
-          cmdr_state = CMDRSTAT_CNFRM;
-          Serial.print("queue qu_clap CHG cmdr_state : ");
-          Serial.println(cmdr_state);
-         
-        }
-        */
 //        vTaskDelay( 50 / portTICK_PERIOD_MS);  // delay 50ms
 //#ifdef OLD_20170920      
         if (clap_valid_f)
@@ -62,30 +49,12 @@ void TaskCommander( void *pvParameters __attribute__((unused)) )  // This is a T
           Serial.println(clap_cmd);
           // display RGB
           RGB_LED_set(colour_arry[constrain(clap_valid_cnt,0,4)]);
-/*
-              if ( motor_running_f )
-              {
-                clap_cmd_pending_f = true;        // if the car is in motion, this flag help speed up the response
-                Serial.println("motor_running_f true");
-                cmdr_state = CMDRSTAT_STDBY;    //0
-              }
-              else
-              {
-                Serial.println("motor_running_f false");
-                cmdr_state = CMDRSTAT_CNFRM;    // 1
-              }
-*/
+
           cmdr_state = CMDRSTAT_CNFRM;
           Serial.print("CHG cmdr_state : ");
           Serial.println(cmdr_state);
           clap_cmd_ms_ts = millis();
          
-#ifdef SERIAL_DBG_ON    
-          Serial.print("clap_cmd_ms_ts : ");
-          Serial.print(clap_cmd_ms_ts);
-          Serial.print("  clap_cmd : ");
-          Serial.println(clap_cmd);
-#endif
         }
 
         vTaskDelay( 50 / portTICK_PERIOD_MS);  // delay 50ms
@@ -134,7 +103,8 @@ void TaskCommander( void *pvParameters __attribute__((unused)) )  // This is a T
           {
             RGB_LED_set(COLOUR_NIL);
             cmdr_state = CMDRSTAT_STDBY;
-            
+            clap_valid_cnt = 0;
+            clap_cmd_rdy_f = false;
           }
           vTaskDelay( 250 / portTICK_PERIOD_MS);  // delay 50ms
         }
@@ -162,15 +132,22 @@ void TaskMotionCtrl( void *pvParameters __attribute__((unused)) )  // This is a 
           {
             case 1:     // GO FORWARD
               //Serial.println("motion state : MOTION_STAT_HALT --> MOTION_STAT_MOVING_FWD");
-              motor_PWM = 50;
+              motor_PWM = 80;
               motor_forward(motor_PWM);    // 50%
               motor_running_f = true;
               motion_state = MOTION_STAT_MOVING_FWD;
               clap_cmd_pending_f = false;
               break;
-            case 2:     // BACK OFF A BIT
+            case 2:     // GO BACKWARD
+              //Serial.println("motion state : MOTION_STAT_HALT --> BACKWARD ");
+              motor_reverse(100);    // 50%
+              motor_running_f = true;
+              clap_cmd_pending_f = false;
+              motion_state = MOTION_STAT_MOVING_RVD;
+              break;
+            case 3:     // BACK OFF A BIT
               //Serial.println("motion state : MOTION_STAT_HALT --> BACKOFF --> MOTION_STAT_MOVING_FWD");
-              motor_reverse(20);    // 50%
+              motor_reverse(80);    // 50%
               vTaskDelay( 200 / portTICK_PERIOD_MS);
               motor_stop();
               motor_running_f = false;
@@ -188,24 +165,20 @@ void TaskMotionCtrl( void *pvParameters __attribute__((unused)) )  // This is a 
         {
           clap_cmd_pending_f = false;
           clap_cmd_rdy_f = false;
-/*        if ( clap_cmd_pending_f )
-        {
-          clap_cmd_pending_f = false;
-*/
           switch (clap_cmd)
           {
-            case 1: // SLOW DOWN to half of current PWM
+            case 2: // SLOW DOWN to half of current PWM
               //Serial.println("motion state : MOTION_STAT_MOVING_FWD --> 1 clap --> reduce speed by 50%");
               motor_PWM = constrain(motor_PWM * 0.5, 0, 100);
               motor_forward(motor_PWM);    
               break;
-            case 2:
+            case 3:
               motor_stop();
               //Serial.println("motion state : MOTION_STAT_MOVING_FWD --> 2 claps --> MOTION_STAT_HALT");
               motor_running_f = false;
               motion_state = MOTION_STAT_HALT;
               break;
-            case 3: // SPEED UP half of current PWM
+            case 1: // SPEED UP half of current PWM
               motor_PWM = constrain(motor_PWM * 1.5, 0, 100);
               //Serial.println("motion state : MOTION_STAT_MOVING_FWD --> 3 claps --> increase speed by 50%");
               motor_forward(motor_PWM);    

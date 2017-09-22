@@ -5,12 +5,12 @@
 // motor one
 //const byte enA = 6;
 //const byte in1 = 8;
-const byte in1 = 6;     // Speed
-const byte in2 = 7;     // Dir
+const byte in1dir = 7;     //  Dir grey
+const byte in2spd = 6;     //  Speed  white
 // motor two
 //const byte enB = 3;
-const byte in3 = 4;     // Speed 
-const byte in4 = 5;     // Dir
+const byte in3dir = 4;     // Dir red
+const byte in4spd = 5;     //  Speed blue
 
 void motor_stop( void );
 void motor_reverse( unsigned int PWM );
