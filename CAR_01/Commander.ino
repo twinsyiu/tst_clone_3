@@ -1,5 +1,5 @@
 #include <Arduino_FreeRTOS.h>   // use FreeRTOS, install lib required
-#include "queue.h"
+//#include "queue.h"
 #include "Commander.h"
 #include "ClapDetect.h"
 #include "RGBLED_Hdlr.h"
@@ -132,7 +132,7 @@ void TaskMotionCtrl( void *pvParameters __attribute__((unused)) )  // This is a 
           {
             case 1:     // GO FORWARD
               //Serial.println("motion state : MOTION_STAT_HALT --> MOTION_STAT_MOVING_FWD");
-              motor_PWM = 80;
+              motor_PWM = 100;
               motor_forward(motor_PWM);    // 50%
               motor_running_f = true;
               motion_state = MOTION_STAT_MOVING_FWD;
@@ -140,15 +140,16 @@ void TaskMotionCtrl( void *pvParameters __attribute__((unused)) )  // This is a 
               break;
             case 2:     // GO BACKWARD
               //Serial.println("motion state : MOTION_STAT_HALT --> BACKWARD ");
-              motor_reverse(100);    // 50%
+              motor_PWM = 100;
+              motor_reverse(motor_PWM);    // 50%
               motor_running_f = true;
               clap_cmd_pending_f = false;
               motion_state = MOTION_STAT_MOVING_RVD;
               break;
             case 3:     // BACK OFF A BIT
               //Serial.println("motion state : MOTION_STAT_HALT --> BACKOFF --> MOTION_STAT_MOVING_FWD");
-              motor_reverse(80);    // 50%
-              vTaskDelay( 200 / portTICK_PERIOD_MS);
+              motor_reverse(100);    // 50%
+              vTaskDelay( 2000 / portTICK_PERIOD_MS);
               motor_stop();
               motor_running_f = false;
               clap_cmd_pending_f = false;
@@ -159,6 +160,7 @@ void TaskMotionCtrl( void *pvParameters __attribute__((unused)) )  // This is a 
         vTaskDelay( 30 / portTICK_PERIOD_MS);
         break;
       case MOTION_STAT_MOVING_FWD:
+      case MOTION_STAT_MOVING_RVD:
         // check ultrasound sensor distance
         // listen to command
         if ( clap_cmd_rdy_f )
@@ -167,21 +169,34 @@ void TaskMotionCtrl( void *pvParameters __attribute__((unused)) )  // This is a 
           clap_cmd_rdy_f = false;
           switch (clap_cmd)
           {
+            case 1: // SPEED UP half of current PWM
+              motor_PWM = constrain(motor_PWM * 1.5, 0, 100);
+              //Serial.println("motion state : MOTION_STAT_MOVING_FWD --> 3 claps --> increase speed by 50%");
+              Serial.print("motion 1 : "); Serial.println(motor_PWM);
+              goto APPLY_PWM;
+              break;
             case 2: // SLOW DOWN to half of current PWM
               //Serial.println("motion state : MOTION_STAT_MOVING_FWD --> 1 clap --> reduce speed by 50%");
-              motor_PWM = constrain(motor_PWM * 0.5, 0, 100);
-              motor_forward(motor_PWM);    
+              motor_PWM = constrain(motor_PWM * 0.9, 0, 100);
+              Serial.print("motion 2 : "); Serial.println(motor_PWM);
+APPLY_PWM:              
+              if ( motion_state == MOTION_STAT_MOVING_FWD )
+              {
+                motor_forward(motor_PWM); 
+                //break;
+              }
+              else if ( motion_state == MOTION_STAT_MOVING_RVD )
+              {
+                motor_reverse(motor_PWM); 
+                //break;
+              }
+                 
               break;
             case 3:
               motor_stop();
               //Serial.println("motion state : MOTION_STAT_MOVING_FWD --> 2 claps --> MOTION_STAT_HALT");
               motor_running_f = false;
               motion_state = MOTION_STAT_HALT;
-              break;
-            case 1: // SPEED UP half of current PWM
-              motor_PWM = constrain(motor_PWM * 1.5, 0, 100);
-              //Serial.println("motion state : MOTION_STAT_MOVING_FWD --> 3 claps --> increase speed by 50%");
-              motor_forward(motor_PWM);    
               break;
           }
         }
