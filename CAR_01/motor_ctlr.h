@@ -9,8 +9,8 @@ const byte in1dir = 7;     //  Dir grey
 const byte in2spd = 6;     //  Speed  white
 // motor two
 //const byte enB = 3;
-const byte in3dir = 4;     // Dir red
 const byte in4spd = 5;     //  Speed blue
+const byte in3dir = 4;     // Dir red
 
 void motor_stop( void );
 void motor_reverse( unsigned int PWM );
