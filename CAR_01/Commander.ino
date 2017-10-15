@@ -1,5 +1,4 @@
 #include <Arduino_FreeRTOS.h>   // use FreeRTOS, install lib required
-//#include "queue.h"
 #include "Commander.h"
 #include "ClapDetect.h"
 #include "RGBLED_Hdlr.h"
@@ -33,14 +32,14 @@ void TaskCommander( void *pvParameters __attribute__((unused)) )  // This is a T
 {
   unsigned int cmdr_state = CMDRSTAT_STDBY;    // waiting a clap
   unsigned int clap_cmd_ms_ts, diff_ms;
+
+  unsigned int clap_cnt_msg;
   
   for (;;)
   {
     switch (cmdr_state)
     {
       case CMDRSTAT_STDBY:
-//        vTaskDelay( 50 / portTICK_PERIOD_MS);  // delay 50ms
-//#ifdef OLD_20170920      
         if (clap_valid_f)
         {
           clap_valid_f = false;     // clear the valid flag
@@ -62,10 +61,8 @@ void TaskCommander( void *pvParameters __attribute__((unused)) )  // This is a T
       case CMDRSTAT_CNFRM:
         if (clap_valid_f)
         {
-//#ifdef SERIAL_DBG_ON    
-          Serial.print("clap_valid_f : TRUE ======= clap_valid_cnt : ");
-          Serial.println(clap_valid_cnt);
-//#endif
+          // Serial.print("clap_valid_f : TRUE ======= clap_valid_cnt : ");
+          // Serial.println(clap_valid_cnt);
           clap_valid_f = false;     // clear the valid flag
           if (clap_valid_cnt == 1)
           {
@@ -120,6 +117,8 @@ void TaskMotionCtrl( void *pvParameters __attribute__((unused)) )  // This is a 
   
   for (;;)
   {
+    // Serial.print(millis());
+    // Serial.println(" - TaskMotionCtrl");
     switch (motion_state)
     {
       case MOTION_STAT_HALT:
@@ -172,13 +171,13 @@ void TaskMotionCtrl( void *pvParameters __attribute__((unused)) )  // This is a 
             case 1: // SPEED UP half of current PWM
               motor_PWM = constrain(motor_PWM * 1.5, 0, 100);
               //Serial.println("motion state : MOTION_STAT_MOVING_FWD --> 3 claps --> increase speed by 50%");
-              Serial.print("motion 1 : "); Serial.println(motor_PWM);
+              Serial.print("in motion, 1 clap: "); Serial.println(motor_PWM);
               goto APPLY_PWM;
               break;
             case 2: // SLOW DOWN to half of current PWM
               //Serial.println("motion state : MOTION_STAT_MOVING_FWD --> 1 clap --> reduce speed by 50%");
               motor_PWM = constrain(motor_PWM * 0.9, 0, 100);
-              Serial.print("motion 2 : "); Serial.println(motor_PWM);
+              Serial.print("in motion, 2 claps: "); Serial.println(motor_PWM);
 APPLY_PWM:              
               if ( motion_state == MOTION_STAT_MOVING_FWD )
               {
@@ -193,6 +192,8 @@ APPLY_PWM:
                  
               break;
             case 3:
+              motor_PWM = 0;
+              Serial.print("in motion, 3 claps: "); Serial.println(motor_PWM);
               motor_stop();
               //Serial.println("motion state : MOTION_STAT_MOVING_FWD --> 2 claps --> MOTION_STAT_HALT");
               motor_running_f = false;

@@ -14,6 +14,15 @@ void TaskUltraSound_Init( void )
 {
   pinMode(trigPin, OUTPUT); 
   pinMode(echoPin, INPUT); 
+
+    // Now set up Tasks to run independently.
+  xTaskCreate(
+    TaskUltraSoundRead
+    ,  (const portCHAR *)"TaskUltraSoundRead"  // A name just for humans
+    ,  128  // This stack size can be checked & adjusted by reading the Stack Highwater
+    ,  NULL
+    ,  2  // Priority, with 1 being the highest, and 4 being the lowest.
+    ,  NULL );
 }
 
 

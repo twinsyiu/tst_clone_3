@@ -13,6 +13,16 @@ void TaskClapDetect_init( void )
 {
   // using RISING edge on sound level sensor
   attachInterrupt(digitalPinToInterrupt(interruptPin), log_chg, RISING);
+
+  // Serial.println("TaskClapDetect: b4 create"); 
+  xTaskCreate(
+    TaskClapDetect 
+    ,  (const portCHAR *) "TaskClapDetect" 
+    ,  128  // Stack size
+    ,  NULL
+    ,  1
+    ,  NULL );
+  Serial.println("TaskClapDetect: create OK"); 
 }
 
 void TaskClapDetect( void *pvParameters __attribute__((unused)) )  // This is a Task.
@@ -32,9 +42,12 @@ void TaskClapDetect( void *pvParameters __attribute__((unused)) )  // This is a 
 
   for (;;)
   {
+    // Serial.print(micros());
+    // Serial.println(" - TaskClapDetect");
     switch (clap_state)
     {
       case CLAPSTAT_IDLE:
+        // Serial.println("IDLE "); 
         if (clap_detected_f)
         {
           clap_detected_f = false;
@@ -42,22 +55,19 @@ void TaskClapDetect( void *pvParameters __attribute__((unused)) )  // This is a 
           last_clap_start_us = clap_start_us;
           debounce_cnt = CLAP_DEBOUNCE_MS / portTICK_PERIOD_MS;
           marker_1_us = micros();
-#ifdef SERIAL_DBG_ON    
-          Serial.println("IDLE "); 
-#endif
-          vTaskDelay(1);  // one tick delay (15ms)
+          // Serial.println("IDLE : clap_detected_f TRUE"); 
+          vTaskDelay( 15 / portTICK_PERIOD_MS);
         }
         break;
       case CLAPSTAT_DEBOUNCE:
+        // Serial.println("CLAPSTAT_DEBOUNCE "); 
         marker_2_us = micros();     // want to know how long does it takes from IDLE to DEBOUNCE
         // exit this state when clap pin is LOW for at least 45ms
         // during the debounce state, ignor any clap_detected_f HIGH, clear it if necessary
         curr_val = digitalRead(interruptPin);
         if (curr_val == HIGH)
         {
-#ifdef SERIAL_DBG_ON    
-          Serial.println("DEBOUNCE curr_val == HI");
-#endif
+          // Serial.println("DEBOUNCE curr_val == HI");
           debounce_cnt = CLAP_DEBOUNCE_MS / portTICK_PERIOD_MS;
           clap_detected_f = false;        // clear the flag, no matter any noise
         }
@@ -80,7 +90,8 @@ void TaskClapDetect( void *pvParameters __attribute__((unused)) )  // This is a 
             Serial.print("  curr_ts: "); 
             Serial.println(micros()); 
 #endif
-            vTaskDelay(1);  // one tick delay (15ms) in between reads for stability
+            //vTaskDelay(1);  // one tick delay (15ms) in between reads for stability
+            vTaskDelay( 15 / portTICK_PERIOD_MS);
           }
           else
           { // the debounce_cnt is 0, ie the count down to debounce is completed
@@ -91,12 +102,11 @@ void TaskClapDetect( void *pvParameters __attribute__((unused)) )  // This is a 
         }
         break;
       case CLAPSTAT_DETECTED:
+        // Serial.println("CLAPSTAT_DETECTED");
         // similar to IDLE, it will detect the next clap
         if (clap_detected_f)
         {
-#ifdef SERIAL_DBG_ON    
-          Serial.println("DETECTED, another one just detected");
-#endif
+          // Serial.println("DETECTED, another one just detected");
           clap_detected_f = false;
           clap_state = CLAPSTAT_DEBOUNCE;
           last_clap_start_us = clap_start_us;
@@ -125,15 +135,19 @@ void TaskClapDetect( void *pvParameters __attribute__((unused)) )  // This is a 
           Serial.println(clap_valid_cnt); 
 #endif
         }
-        vTaskDelay(1);  // nof tick delay (15ms)
+        //vTaskDelay(10);  // nof tick delay (15ms)
+        vTaskDelay( 15 / portTICK_PERIOD_MS);
         break;
       default:
+        // Serial.println("CLAPSTAT_default");
         break;
     }
+    vTaskDelay( 30 / portTICK_PERIOD_MS);
   }
 }
 
-void log_chg() {
+void log_chg()
+{
   // set clap_flag if it is not set, it will be cleared in the clap task
   clap_detected_f = true;
   // set clap detected time
