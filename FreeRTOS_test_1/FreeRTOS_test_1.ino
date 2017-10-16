@@ -2,15 +2,15 @@
 #include <semphr.h>  // add the FreeRTOS functions for Semaphores (or Flags).
 
 #include <SPI.h>    // use SPI library for MicroMag
-#include <MicroMag.h> // use MicroMag, install lib required
+//MY //#include <MicroMag.h> // use MicroMag, install lib required
 
 #include <Wire.h>   // use I2C library
-#include <LiquidCrystal_I2C.h> // // use LiquidCrystal_I2C FC-113, install lib required
+//MY #include <LiquidCrystal_I2C.h> // // use LiquidCrystal_I2C FC-113, install lib required
 
 #define SERIAL_DBG_ON   // enable serial monitor output debug message
 /**********************************************************/
 // initialize the library with the numbers of the interface pins
-LiquidCrystal_I2C lcd(0x27,16,2); // set the LCD address to 0x27 for a 16 chars and 2 line display
+//MY LiquidCrystal_I2C lcd(0x27,16,2); // set the LCD address to 0x27 for a 16 chars and 2 line display
 
 // Declare a mutex Semaphore Handle which we will use to manage the Serial Port.
 // It will be used to ensure only only one Task is accessing this resource at any time.
@@ -38,7 +38,7 @@ void TaskMagnetRead( void *pvParameters );
 void TaskDispLCDDummy( void *pvParameters );
 
 // Create a MicroMag object
-MicroMag MM = MicroMag::MicroMag3(mmSsPin, mmDrdyPin, mmResetPin);
+//MY MicroMag MM = MicroMag::MicroMag3(mmSsPin, mmDrdyPin, mmResetPin);
 
 
 // the setup function runs once when you press reset or power the board
