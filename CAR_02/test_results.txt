@@ -1,0 +1,237 @@
+@ 15ms encoder loop 
++++++++++++++++++++++++++++++++++++++++++++++++
+motor_forward(15%)
+l_encoder_count : 103
+r_encoder_count : 102
+current_ts : 5001
+start_ts : 0
+actual duration : 5001
+motor_stop(0%)
+motor_forward(20%)
+l_encoder_count : 131
+r_encoder_count : 131
+current_ts : 12007
+start_ts : 7006
+actual duration : 5001
+motor_stop(0%)
+motor_forward(30%)
+l_encoder_count : 139
+r_encoder_count : 134
+current_ts : 19013
+start_ts : 14012
+actual duration : 5001
+motor_stop(0%)
+====================================
+motor_reverse(15%)
+l_encoder_count : 98
+r_encoder_count : 105
+current_ts : 26022
+start_ts : 21021
+actual duration : 5001
+motor_stop(0%)
+motor_reverse(20%)
+l_encoder_count : 129
+r_encoder_count : 131
+current_ts : 33029
+start_ts : 28027
+actual duration : 5002
+motor_stop(0%)
+motor_reverse(30%)
+l_encoder_count : 141
+r_encoder_count : 123
+current_ts : 40036
+start_ts : 35035
+actual duration : 5001
+motor_stop(0%)
+====================================
+END OF TEST
+
+@ 5ms encoder loop 
++++++++++++++++++++++++++++++++++++++++++++++++
+motor_forward(15%)
+l_encoder_count : 101
+r_encoder_count : 102
+current_ts : 5004
+start_ts : 0
+actual duration : 5004
+motor_stop(0%)
+motor_forward(20%)
+l_encoder_count : 132
+r_encoder_count : 136
+current_ts : 12013
+start_ts : 7009
+actual duration : 5004
+motor_stop(0%)
+motor_forward(30%)
+l_encoder_count : 189
+r_encoder_count : 193
+current_ts : 19022
+start_ts : 14018
+actual duration : 5004
+motor_stop(0%)
+====================================
+motor_reverse(15%)
+l_encoder_count : 98
+r_encoder_count : 104
+current_ts : 26031
+start_ts : 21031
+actual duration : 5000
+motor_stop(0%)
+motor_reverse(20%)
+l_encoder_count : 129
+r_encoder_count : 135
+current_ts : 33036
+start_ts : 28036
+actual duration : 5000
+motor_stop(0%)
+motor_reverse(30%)
+l_encoder_count : 184
+r_encoder_count : 195
+current_ts : 40045
+start_ts : 35041
+actual duration : 5004
+motor_stop(0%)
+====================================
+END OF TEST
+@ 2ms encoder loop 
++++++++++++++++++++++++++++++++++++++++++++++++
+motor_forward(15%)
+l_encoder_count : 101
+r_encoder_count : 103
+current_ts : 5000
+start_ts : 0
+actual duration : 5000
+motor_stop(0%)
+motor_forward(20%)
+l_encoder_count : 132
+r_encoder_count : 137
+current_ts : 12005
+start_ts : 7005
+actual duration : 5000
+motor_stop(0%)
+motor_forward(30%)
+l_encoder_count : 189
+r_encoder_count : 194
+current_ts : 19010
+start_ts : 14010
+actual duration : 5000
+motor_stop(0%)
+====================================
+motor_reverse(15%)
+l_encoder_count : 98
+r_encoder_count : 106
+current_ts : 26019
+start_ts : 21019
+actual duration : 5000
+motor_stop(0%)
+motor_reverse(20%)
+l_encoder_count : 131
+r_encoder_count : 137
+current_ts : 33025
+start_ts : 28024
+actual duration : 5001
+motor_stop(0%)
+motor_reverse(30%)
+l_encoder_count : 185
+r_encoder_count : 195
+current_ts : 40031
+start_ts : 35030
+actual duration : 5001
+motor_stop(0%)
+====================================
+END OF TEST
+@ 8ms encoder loop 
++++++++++++++++++++++++++++++++++++++++++++++++
+motor_forward(15%)
+l_encoder_count : 101
+r_encoder_count : 102
+current_ts : 5003
+start_ts : 0
+actual duration : 5003
+motor_stop(0%)
+motor_forward(20%)
+l_encoder_count : 131
+r_encoder_count : 137
+current_ts : 12011
+start_ts : 7008
+actual duration : 5003
+motor_stop(0%)
+motor_forward(30%)
+l_encoder_count : 189
+r_encoder_count : 193
+current_ts : 19020
+start_ts : 14017
+actual duration : 5003
+motor_stop(0%)
+====================================
+motor_reverse(15%)
+l_encoder_count : 98
+r_encoder_count : 106
+current_ts : 26033
+start_ts : 21028
+actual duration : 5005
+motor_stop(0%)
+motor_reverse(20%)
+l_encoder_count : 130
+r_encoder_count : 136
+current_ts : 33041
+start_ts : 28038
+actual duration : 5003
+motor_stop(0%)
+motor_reverse(30%)
+l_encoder_count : 183
+r_encoder_count : 194
+current_ts : 40050
+start_ts : 35047
+actual duration : 5003
+motor_stop(0%)
+====================================
+END OF TEST
+
+@ 10ms encoder loop 
++++++++++++++++++++++++++++++++++++++++++++++++
+motor_forward(15%)
+l_encoder_count : 101
+r_encoder_count : 102
+current_ts : 5009
+start_ts : 0
+actual duration : 5009
+motor_stop(0%)
+motor_forward(20%)
+l_encoder_count : 130
+r_encoder_count : 135
+current_ts : 12023
+start_ts : 7014
+actual duration : 5009
+motor_stop(0%)
+motor_forward(30%)
+l_encoder_count : 187
+r_encoder_count : 192
+current_ts : 19038
+start_ts : 14028
+actual duration : 5010
+motor_stop(0%)
+====================================
+motor_reverse(15%)
+l_encoder_count : 95
+r_encoder_count : 104
+current_ts : 26046
+start_ts : 21046
+actual duration : 5000
+motor_stop(0%)
+motor_reverse(20%)
+l_encoder_count : 128
+r_encoder_count : 136
+current_ts : 33060
+start_ts : 28051
+actual duration : 5009
+motor_stop(0%)
+motor_reverse(30%)
+l_encoder_count : 183
+r_encoder_count : 193
+current_ts : 40065
+start_ts : 35065
+actual duration : 5000
+motor_stop(0%)
+====================================
+END OF TEST
