@@ -13,9 +13,10 @@
 void ultrasound_init( void )
 {
   pinMode(trigPin, OUTPUT); 
-  pinMode(echoPin, INPUT); 
+  pinMode(com_echoPin, INPUT); 
+  pinMode(r_trigPin, OUTPUT); 
+//  pinMode(r_echoPin, INPUT); 
   pinMode(l_trigPin, OUTPUT); 
-  pinMode(l_echoPin, INPUT); 
 
 /*
     // Now set up Tasks to run independently.
@@ -50,7 +51,7 @@ float ultrasound_read_cm( void )
   float duration_us, distance_cm; 
   long int stop_us_ts;
   
-  if ( digitalRead(echoPin) )
+  if ( digitalRead(com_echoPin) )
   {
     stop_us_ts = micros();
     distance_cm = ((stop_us_ts - start_us_ts) * SOUND_SPEED_CM_PER_US)/2;

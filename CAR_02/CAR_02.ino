@@ -5,6 +5,10 @@
 //#define ledPin 13
 
 float vcc_volt;
+const byte ults_interrupt_pin = 3;
+int ults_echo_chg_cnt = 0;
+unsigned long echo_hi_ts_us = 0;
+unsigned long echo_lo_ts_us = 0;
 
 void setup() 
 {
@@ -25,7 +29,8 @@ void setup()
   }
 */
   ultrasound_init( );
-
+  attachInterrupt(digitalPinToInterrupt(ults_interrupt_pin), ults_echo_chg, CHANGE);
+  
   // Timer0 is already used for millis() - we'll just interrupt somewhere
   // in the middle and call the "Compare A" function below
   OCR0A = 0xAF;
@@ -34,6 +39,7 @@ void setup()
 //  pinMode(ledPin, OUTPUT);
   
   // initialize Timer1
+/*
   noInterrupts(); // disable all interrupts
   TCCR1A = 0;
   TCCR1B = 0;
@@ -45,9 +51,23 @@ void setup()
 //  TCCR1B |= (1 << CS12); // 256 prescaler
   TCCR1B |= (1 << CS10); // 1 prescaler
   TIMSK1 |= (1 << OCIE1A); // enable timer compare interrupt
+*/
   interrupts(); // enable all interrupts
 
 //  ultrasound_init();
+}
+
+void ults_echo_chg() 
+{
+  ults_echo_chg_cnt++;
+  if ( digitalRead(com_echoPin) )
+  {
+    echo_hi_ts_us = micros();
+  } 
+  else
+  {
+    echo_lo_ts_us = micros();
+  }
 }
 
 unsigned int high_cntr;
@@ -55,6 +75,10 @@ unsigned int high_cntr;
 unsigned int ults_cntr;
 unsigned int ults_trig = 0;
 unsigned int ults_echo_state = 0;
+
+unsigned int r_ults_cntr;
+unsigned int r_ults_trig = 0;
+unsigned int r_ults_echo_state = 0;
 
 unsigned int l_ults_cntr;
 unsigned int l_ults_trig = 0;
@@ -64,7 +88,7 @@ unsigned int l_ults_echo_state = 0;
 ISR(TIMER1_COMPA_vect) // timer compare interrupt service routine
 {
 //  high_cntr++;
-  
+/*  
   if ( ults_trig )
   {
     if ( !ults_echo_state && digitalRead(echoPin) )
@@ -79,6 +103,23 @@ ISR(TIMER1_COMPA_vect) // timer compare interrupt service routine
     {
       ults_cntr++;
       ults_trig = 0;
+    }
+  }
+
+  if ( r_ults_trig )
+  {
+    if ( !r_ults_echo_state && digitalRead(r_echoPin) )
+    {
+      r_ults_echo_state = 1;  // and start counting
+    } else
+    if ( r_ults_echo_state && digitalRead(r_echoPin) )
+    {
+      r_ults_cntr++;
+    } else
+    if ( r_ults_echo_state && !digitalRead(r_echoPin) )
+    {
+      r_ults_cntr++;
+      r_ults_trig = 0;
     }
   }
 
@@ -98,10 +139,139 @@ ISR(TIMER1_COMPA_vect) // timer compare interrupt service routine
       l_ults_trig = 0;
     }
   }
+*/
+}
 
+float f_dist, l_dist, r_dist;
+
+void loop()
+{
+  int ms_ts;
+  long duration;
+  String stringOne;
+  //Serial.print("high_cntr: ");Serial.println(high_cntr);
+
+  stringOne = "front dist: ";
+  echo_hi_ts_us = 0;
+  echo_lo_ts_us = 0;
+  
+  //ultrasound_trig();
+  // put your main code here, to run repeatedly:
+  digitalWrite(trigPin, LOW); 
+  delayMicroseconds(2); 
+  digitalWrite(trigPin, HIGH); 
+  delayMicroseconds(10); 
+  digitalWrite(trigPin, LOW); 
+
+  // duration = pulseIn(echoPin, HIGH);
+  // Serial.print("front dist: "); Serial.println( constrain(duration * 3.43 / 2 , 0 , 399) );
+  delay(100);
+  stringOne += ults_echo_chg_cnt;
+//  Serial.println(stringOne);
+  f_dist = -1;
+  if ( echo_hi_ts_us && echo_lo_ts_us && (echo_lo_ts_us > echo_hi_ts_us ) && !digitalRead(com_echoPin) )
+  {
+    //Serial.print("front dist: "); Serial.println( constrain((echo_lo_ts_us - echo_hi_ts_us) * 3.43 / 200 , 0 , 399) );
+    f_dist = constrain((echo_lo_ts_us - echo_hi_ts_us) * 3.43 / 200 , 0 , 399);
+  } else if ( !echo_hi_ts_us )
+  {
+    Serial.println("front dist: echo_hi_ts_us is 0"); 
+  } else if ( !echo_lo_ts_us )
+  {
+    Serial.println("front dist: echo_lo_ts_us is 0"); 
+  } else if ( echo_hi_ts_us >= echo_lo_ts_us )
+  {
+    Serial.println("front dist: echo_hi_ts_us >= echo_lo_ts_us"); 
+  } else if (digitalRead(com_echoPin))
+  {
+    Serial.println("front dist: com_echoPin is HI"); 
+  } else
+  {
+    Serial.println("front dist: unknown error"); 
+  }
+ 
+
+  digitalWrite(l_trigPin, LOW); 
+  delayMicroseconds(2); 
+  digitalWrite(l_trigPin, HIGH); 
+  delayMicroseconds(10); 
+  digitalWrite(l_trigPin, LOW); 
+
+  // duration = pulseIn(echoPin, HIGH);
+  // Serial.print("left dist: "); Serial.println( constrain(duration * 3.43 / 2 , 0 , 399) );
+  delay(100);
+  stringOne = "left dist: ";
+  stringOne += ults_echo_chg_cnt;
+//  Serial.println(stringOne);
+  l_dist = -1;
+  if ( echo_hi_ts_us && echo_lo_ts_us && (echo_lo_ts_us > echo_hi_ts_us ) && !digitalRead(com_echoPin) )
+  {
+    // Serial.print("left dist: "); Serial.println( constrain((echo_lo_ts_us - echo_hi_ts_us) * 3.43 / 200 , 0 , 399) );
+    l_dist = constrain((echo_lo_ts_us - echo_hi_ts_us) * 3.43 / 200 , 0 , 399);
+  } else if ( !echo_hi_ts_us )
+  {
+    Serial.println("left dist: echo_hi_ts_us is 0"); 
+  } else if ( !echo_lo_ts_us )
+  {
+    Serial.println("left dist: echo_lo_ts_us is 0"); 
+  } else if ( echo_hi_ts_us >= echo_lo_ts_us )
+  {
+    Serial.println("left dist: echo_hi_ts_us >= echo_lo_ts_us"); 
+  } else if (digitalRead(com_echoPin))
+  {
+    Serial.println("left dist: com_echoPin is HI"); 
+  } else
+  {
+    Serial.println("left dist: unknown error"); 
+  }
+ 
+
+  digitalWrite(r_trigPin, LOW); 
+  delayMicroseconds(2); 
+  digitalWrite(r_trigPin, HIGH); 
+  delayMicroseconds(10); 
+  digitalWrite(r_trigPin, LOW); 
+
+  // duration = pulseIn(echoPin, HIGH);
+  // Serial.print("right dist: "); Serial.println( constrain(duration * 3.43 / 2 , 0 , 399) );
+  delay(100);
+  stringOne = "right dist: ";
+  stringOne += ults_echo_chg_cnt;
+//  Serial.println(stringOne);
+  r_dist = -1;
+  if ( echo_hi_ts_us && echo_lo_ts_us && (echo_lo_ts_us > echo_hi_ts_us ) && !digitalRead(com_echoPin) )
+  {
+    //Serial.print("right dist: "); Serial.println( constrain((echo_lo_ts_us - echo_hi_ts_us) * 3.43 / 200 , 0 , 399) );
+    r_dist = constrain((echo_lo_ts_us - echo_hi_ts_us) * 3.43 / 200 , 0 , 399);
+  } else if ( !echo_hi_ts_us )
+  {
+    Serial.println("right dist: echo_hi_ts_us is 0"); 
+  } else if ( !echo_lo_ts_us )
+  {
+    Serial.println("right dist: echo_lo_ts_us is 0"); 
+  } else if ( echo_hi_ts_us >= echo_lo_ts_us )
+  {
+    Serial.println("right dist: echo_hi_ts_us >= echo_lo_ts_us"); 
+  } else if (digitalRead(com_echoPin))
+  {
+    Serial.println("right dist: com_echoPin is HI"); 
+  } else
+  {
+    Serial.println("right dist: unknown error"); 
+  }
+ 
+  stringOne = "left/front/right dist: ";
+  stringOne += l_dist; stringOne += " / ";
+  stringOne += f_dist; stringOne += " / ";
+  stringOne += r_dist;
+  Serial.println(stringOne);
+  
+  
+  delay(500);
 }
 
 
+/*
 void loop()
 {
   int ms_ts;
@@ -124,35 +294,72 @@ void loop()
 
   while (ults_trig && (ults_cntr < 2000))
   {
-    Serial.print("- ");
+    ////Serial.print("  ");
+    delay(1);
     if ( (millis() - ms_ts) > 10 )
     {
-      //Serial.print("ults_cntr: ");Serial.println(ults_cntr);
-      Serial.print("+ ");
+      Serial.println("+");
+      delay(1);
       ms_ts = millis();
     }
   }   // do nothing when the trig is high AND not timeout 200ms
-  Serial.print("%% ");
+  ////Serial.print("  ");
+  delay(1);
   
   if (ults_trig)
   {
     // timeout
     Serial.println("FRONT : TOO FAR or TIMEOUT ");
   }
-  else
+
+  delay(10);
+
+  digitalWrite(r_trigPin, LOW); 
+  delayMicroseconds(2); 
+  digitalWrite(r_trigPin, HIGH); 
+  delayMicroseconds(10); 
+  digitalWrite(r_trigPin, LOW); 
+  
+  r_ults_cntr = 0;
+  r_ults_trig = 1;
+  r_ults_echo_state = 0;
+
+  ms_ts = millis();
+
+  while (r_ults_trig && (r_ults_cntr < 2000))
   {
-//    Serial.print("front dist: "); Serial.println( ults_cntr * 3.43 / 2 );
+    ////Serial.print("  ");
+    delay(1);
+    if ( (millis() - ms_ts) > 10 )
+    {
+      Serial.println("&");
+      delay(1);
+      ms_ts = millis();
+    }
+  }   // do nothing when the trig is high AND not timeout 200ms
+  ////Serial.println("  ");
+  delay(1);
+  
+  if (r_ults_trig)
+  {
+    // timeout
+    Serial.println("LEFT : TOO FAR or TIMEOUT ");
   }
 
-//  Serial.println("----------------");
   delay(10);
+
+  
+  pinMode(l_trigPin, OUTPUT); 
 
   digitalWrite(l_trigPin, LOW); 
   delayMicroseconds(2); 
   digitalWrite(l_trigPin, HIGH); 
   delayMicroseconds(10); 
   digitalWrite(l_trigPin, LOW); 
-  
+  delayMicroseconds(2); 
+
+  pinMode(l_echoPin, INPUT); 
+
   l_ults_cntr = 0;
   l_ults_trig = 1;
   l_ults_echo_state = 0;
@@ -161,34 +368,32 @@ void loop()
 
   while (l_ults_trig && (l_ults_cntr < 2000))
   {
-    Serial.print("& ");
-    //delay(2);
+    ////Serial.print(" ");
+    delay(1);
     if ( (millis() - ms_ts) > 10 )
     {
-      Serial.print("# ");
-      //Serial.print("l_ults_cntr: ");Serial.println(l_ults_cntr);
+      Serial.println("%");
+      delay(1);
       ms_ts = millis();
     }
   }   // do nothing when the trig is high AND not timeout 200ms
-  Serial.println("@ ");
+  ////Serial.println(" ");
+  delay(1);
   
   if (l_ults_trig)
   {
     // timeout
     Serial.println("LEFT : TOO FAR or TIMEOUT ");
   }
-  else
-  {
-//    Serial.print("left dist: "); Serial.println( l_ults_cntr * 3.43 / 2 );
-  }
 
-    Serial.print("front dist: "); Serial.print( ults_cntr * 3.43 / 2 );
-    Serial.print("   left dist: "); Serial.println( l_ults_cntr * 3.43 / 2 );
+    Serial.print("front dist: "); Serial.print( constrain(ults_cntr * 3.43 / 2 , 0 , 399) );
+    Serial.print("   left dist: "); Serial.print( constrain(l_ults_cntr * 3.43 / 2 , 0 , 399) );
+    Serial.print("   right dist: "); Serial.println( constrain(r_ults_cntr * 3.43 / 2 , 0 , 399));
 
 //  Serial.println("================");
   delay(500);
 }
-
+*/
 
 
 
