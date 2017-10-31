@@ -2,8 +2,6 @@
 #include "encoder.h"
 #include "UltraSound.h"
 
-//#define ledPin 13
-
 float vcc_volt;
 const byte ults_interrupt_pin = 3;
 int ults_echo_chg_cnt = 0;
@@ -36,25 +34,8 @@ void setup()
   OCR0A = 0xAF;
   TIMSK0 |= _BV(OCIE0A);
 
-//  pinMode(ledPin, OUTPUT);
-  
-  // initialize Timer1
-/*
-  noInterrupts(); // disable all interrupts
-  TCCR1A = 0;
-  TCCR1B = 0;
-  TCNT1 = 0;
-  
-//  OCR1A = 31250; // compare match register 16MHz/256/2Hz
-  OCR1A = 1600; // compare match register 16MHz/1/10kHz
-  TCCR1B |= (1 << WGM12); // CTC mode
-//  TCCR1B |= (1 << CS12); // 256 prescaler
-  TCCR1B |= (1 << CS10); // 1 prescaler
-  TIMSK1 |= (1 << OCIE1A); // enable timer compare interrupt
-*/
   interrupts(); // enable all interrupts
 
-//  ultrasound_init();
 }
 
 void ults_echo_chg() 
@@ -70,7 +51,6 @@ void ults_echo_chg()
   }
 }
 
-unsigned int high_cntr;
 
 unsigned int ults_cntr;
 unsigned int ults_trig = 0;
@@ -87,59 +67,6 @@ unsigned int l_ults_echo_state = 0;
 
 ISR(TIMER1_COMPA_vect) // timer compare interrupt service routine
 {
-//  high_cntr++;
-/*  
-  if ( ults_trig )
-  {
-    if ( !ults_echo_state && digitalRead(echoPin) )
-    {
-      ults_echo_state = 1;  // and start counting
-    } else
-    if ( ults_echo_state && digitalRead(echoPin) )
-    {
-      ults_cntr++;
-    } else
-    if ( ults_echo_state && !digitalRead(echoPin) )
-    {
-      ults_cntr++;
-      ults_trig = 0;
-    }
-  }
-
-  if ( r_ults_trig )
-  {
-    if ( !r_ults_echo_state && digitalRead(r_echoPin) )
-    {
-      r_ults_echo_state = 1;  // and start counting
-    } else
-    if ( r_ults_echo_state && digitalRead(r_echoPin) )
-    {
-      r_ults_cntr++;
-    } else
-    if ( r_ults_echo_state && !digitalRead(r_echoPin) )
-    {
-      r_ults_cntr++;
-      r_ults_trig = 0;
-    }
-  }
-
-  if ( l_ults_trig )
-  {
-    if ( !l_ults_echo_state && digitalRead(l_echoPin) )
-    {
-      l_ults_echo_state = 1;  // and start counting
-    } else
-    if ( l_ults_echo_state && digitalRead(l_echoPin) )
-    {
-      l_ults_cntr++;
-    } else
-    if ( l_ults_echo_state && !digitalRead(l_echoPin) )
-    {
-      l_ults_cntr++;
-      l_ults_trig = 0;
-    }
-  }
-*/
 }
 
 float f_dist, l_dist, r_dist;
@@ -149,7 +76,6 @@ void loop()
   int ms_ts;
   long duration;
   String stringOne;
-  //Serial.print("high_cntr: ");Serial.println(high_cntr);
 
   stringOne = "front dist: ";
   echo_hi_ts_us = 0;
@@ -163,14 +89,21 @@ void loop()
   delayMicroseconds(10); 
   digitalWrite(trigPin, LOW); 
 
-  // duration = pulseIn(echoPin, HIGH);
   // Serial.print("front dist: "); Serial.println( constrain(duration * 3.43 / 2 , 0 , 399) );
   delay(100);
   stringOne += ults_echo_chg_cnt;
-//  Serial.println(stringOne);
+
   f_dist = -1;
+
+  // when the folloing conditions met, then it is a valid ultrasound measurement
+  //   1. echo_hi_ts_us (micros timestamp) is not 0, ie there was a lo->hi change on the common-echo pin
+  //   2. echo_lo_ts_us (micros timestamp) is not 0, ie there was a hi->lo change on the common-echo pin
+  //   3. echo_lo_ts_us > echo_hi_ts_us, ie the edge changes was from lo->hi then hi->lo
+  //   4. digitalRead(com_echoPin) is lo
+  
   if ( echo_hi_ts_us && echo_lo_ts_us && (echo_lo_ts_us > echo_hi_ts_us ) && !digitalRead(com_echoPin) )
   {
+    // this is a valid return from the ultrasound sensor
     //Serial.print("front dist: "); Serial.println( constrain((echo_lo_ts_us - echo_hi_ts_us) * 3.43 / 200 , 0 , 399) );
     f_dist = constrain((echo_lo_ts_us - echo_hi_ts_us) * 3.43 / 200 , 0 , 399);
   } else if ( !echo_hi_ts_us )
@@ -197,12 +130,11 @@ void loop()
   delayMicroseconds(10); 
   digitalWrite(l_trigPin, LOW); 
 
-  // duration = pulseIn(echoPin, HIGH);
   // Serial.print("left dist: "); Serial.println( constrain(duration * 3.43 / 2 , 0 , 399) );
   delay(100);
   stringOne = "left dist: ";
   stringOne += ults_echo_chg_cnt;
-//  Serial.println(stringOne);
+
   l_dist = -1;
   if ( echo_hi_ts_us && echo_lo_ts_us && (echo_lo_ts_us > echo_hi_ts_us ) && !digitalRead(com_echoPin) )
   {
@@ -232,12 +164,9 @@ void loop()
   delayMicroseconds(10); 
   digitalWrite(r_trigPin, LOW); 
 
-  // duration = pulseIn(echoPin, HIGH);
-  // Serial.print("right dist: "); Serial.println( constrain(duration * 3.43 / 2 , 0 , 399) );
   delay(100);
   stringOne = "right dist: ";
   stringOne += ults_echo_chg_cnt;
-//  Serial.println(stringOne);
   r_dist = -1;
   if ( echo_hi_ts_us && echo_lo_ts_us && (echo_lo_ts_us > echo_hi_ts_us ) && !digitalRead(com_echoPin) )
   {
@@ -271,188 +200,11 @@ void loop()
 }
 
 
-/*
-void loop()
-{
-  int ms_ts;
-  //Serial.print("high_cntr: ");Serial.println(high_cntr);
-  
-  //ultrasound_trig();
-  // put your main code here, to run repeatedly:
-  digitalWrite(trigPin, LOW); 
-  delayMicroseconds(2); 
-  digitalWrite(trigPin, HIGH); 
-  delayMicroseconds(10); 
-  digitalWrite(trigPin, LOW); 
-  
-
-  ults_cntr = 0;
-  ults_trig = 1;
-  ults_echo_state = 0;
-
-  ms_ts = millis();
-
-  while (ults_trig && (ults_cntr < 2000))
-  {
-    ////Serial.print("  ");
-    delay(1);
-    if ( (millis() - ms_ts) > 10 )
-    {
-      Serial.println("+");
-      delay(1);
-      ms_ts = millis();
-    }
-  }   // do nothing when the trig is high AND not timeout 200ms
-  ////Serial.print("  ");
-  delay(1);
-  
-  if (ults_trig)
-  {
-    // timeout
-    Serial.println("FRONT : TOO FAR or TIMEOUT ");
-  }
-
-  delay(10);
-
-  digitalWrite(r_trigPin, LOW); 
-  delayMicroseconds(2); 
-  digitalWrite(r_trigPin, HIGH); 
-  delayMicroseconds(10); 
-  digitalWrite(r_trigPin, LOW); 
-  
-  r_ults_cntr = 0;
-  r_ults_trig = 1;
-  r_ults_echo_state = 0;
-
-  ms_ts = millis();
-
-  while (r_ults_trig && (r_ults_cntr < 2000))
-  {
-    ////Serial.print("  ");
-    delay(1);
-    if ( (millis() - ms_ts) > 10 )
-    {
-      Serial.println("&");
-      delay(1);
-      ms_ts = millis();
-    }
-  }   // do nothing when the trig is high AND not timeout 200ms
-  ////Serial.println("  ");
-  delay(1);
-  
-  if (r_ults_trig)
-  {
-    // timeout
-    Serial.println("LEFT : TOO FAR or TIMEOUT ");
-  }
-
-  delay(10);
-
-  
-  pinMode(l_trigPin, OUTPUT); 
-
-  digitalWrite(l_trigPin, LOW); 
-  delayMicroseconds(2); 
-  digitalWrite(l_trigPin, HIGH); 
-  delayMicroseconds(10); 
-  digitalWrite(l_trigPin, LOW); 
-  delayMicroseconds(2); 
-
-  pinMode(l_echoPin, INPUT); 
-
-  l_ults_cntr = 0;
-  l_ults_trig = 1;
-  l_ults_echo_state = 0;
-
-  ms_ts = millis();
-
-  while (l_ults_trig && (l_ults_cntr < 2000))
-  {
-    ////Serial.print(" ");
-    delay(1);
-    if ( (millis() - ms_ts) > 10 )
-    {
-      Serial.println("%");
-      delay(1);
-      ms_ts = millis();
-    }
-  }   // do nothing when the trig is high AND not timeout 200ms
-  ////Serial.println(" ");
-  delay(1);
-  
-  if (l_ults_trig)
-  {
-    // timeout
-    Serial.println("LEFT : TOO FAR or TIMEOUT ");
-  }
-
-    Serial.print("front dist: "); Serial.print( constrain(ults_cntr * 3.43 / 2 , 0 , 399) );
-    Serial.print("   left dist: "); Serial.print( constrain(l_ults_cntr * 3.43 / 2 , 0 , 399) );
-    Serial.print("   right dist: "); Serial.println( constrain(r_ults_cntr * 3.43 / 2 , 0 , 399));
-
-//  Serial.println("================");
-  delay(500);
-}
-*/
-
-
-
-void loop_101()
-{
-
-  high_cntr = 0;
-  delayMicroseconds(10000);   // delayMicroseconds() is not working in this scheme
-  Serial.print("10ms: "); Serial.println(high_cntr);
-  delay(100);
-
-  high_cntr = 0;
-  delayMicroseconds(20000);
-  Serial.print("20ms: "); Serial.println(high_cntr);
-  delay(100);
-
-  high_cntr = 0;
-  delayMicroseconds(30000);
-  Serial.print("30ms: "); Serial.println(high_cntr);
-  delay(100);
-
-  high_cntr = 0;
-  delayMicroseconds(40000);
-  Serial.print("40ms: "); Serial.println(high_cntr);
-  delay(100);
-
-  
-  
-  high_cntr = 0;
-  delay(10);
-  Serial.print("10ms: "); Serial.println(high_cntr);
-
-  high_cntr = 0;
-  delay(20);
-  Serial.print("20ms: "); Serial.println(high_cntr);
-
-  high_cntr = 0;
-  delay(30);
-  Serial.print("30ms: "); Serial.println(high_cntr);
-
-  high_cntr = 0;
-  delay(40);
-  Serial.print("40ms: "); Serial.println(high_cntr);
-
-  high_cntr = 0;
-  delay(70);
-  Serial.print("70ms: "); Serial.println(high_cntr);
-
-  high_cntr = 0;
-  delay(100);
-  Serial.print("100ms: "); Serial.println(high_cntr);
-
-  while(1) {};
-  
-}
-
+//
+// previous loop() to test the encoder feedback which adjust the left wheel PWM to ensure straight line movement.
+//
 void loop_111() 
 {
-  // put your main code here, to run repeatedly:
   unsigned int motor_PWM;
   unsigned int l_motor_PWM;
   encoder_Struct encoder;
@@ -461,56 +213,36 @@ void loop_111()
   int l_faster, prev_l_faster;
 
   int i;
-/*  
-  motor_PWM = 15;
-  
-  for ( loop_cnt = 4 ; loop_cnt > 0 ; loop_cnt-- )
-  {
-    reset_encoder_count();
-    Serial.print("motor_forward (%): "); Serial.print(motor_PWM); Serial.print("-----"); 
-    motor_forward(motor_PWM);    // 
 
-    for ( i = 20 ; i > 0 ; i-- )
-    {
-      delay(200);
-      l_faster = get_encoder( &encoder );
-      if ( l_faster > 0 )
-      {
-        // slow down the left wheel
-      } else if ( l_faster < 0 )
-      {
-        // speed up the left wheel
-      } // else equal, do nothing
-      Serial.print("left enc cnt : "); Serial.print(encoder.l_encoder_count);
-      Serial.print("    righ enc cnt : "); Serial.println(encoder.r_encoder_count);
-    }
-    motor_PWM += 10;
-  }
+  //
+  // do motor reverse compensation using the encoder as feedback
+  //
+  motor_PWM = 15;               // initial test PWM = 15%
+  l_motor_PWM = motor_PWM;      // left_motor_PWM = 15%
 
-  motor_stop();
-  delay(4000);
-*/
-
-
-  motor_PWM = 15;
-  l_motor_PWM = motor_PWM;
-  
+  // 7 steps to increase the motor PWM
   for ( loop_cnt = 7 ; loop_cnt > 0 ; loop_cnt-- )
   {
     reset_encoder_count();
+    
     Serial.print("motor_reverse (%): "); Serial.print(motor_PWM); Serial.print("----- with auto compensation"); 
     motor_reverse(motor_PWM);    // 
 
     for ( i = 40 ; i > 0 ; i-- )
     {
-      delay(200);
+      delay(200);     // the delay is a test feature/stub to kill time, in real application, other code (FreeRTOS tasks) will be running
+      
+      // l_faster : an integer flag to indicate if left wheel is faster 
+      //   l_faster > 0 : left wheel is faster
+      //   l_faster < 0 : left wheel is slower
+      
       l_faster = get_encoder( &encoder );
       if ( l_faster > 0 )
-      {
+      { //   l_faster > 0 : left wheel is faster
         // slow down the left wheel
         if ( prev_l_faster > 0 )
         {
-          l_motor_PWM -= 2;
+          l_motor_PWM -= 2;     // double the decreament if prev sample indicating the left was faster already
         }
         else
         {
@@ -520,11 +252,11 @@ void loop_111()
         Serial.print("(-) ");
       } 
       else if ( l_faster < 0 )
-      {
+      { //   l_faster < 0 : left wheel is slower
         // speed up the left wheel
         if ( prev_l_faster < 0 )
         {
-          l_motor_PWM += 2;
+          l_motor_PWM += 2;     // double the increament if prev sample indicating the left was slower already
         }
         else
         {
@@ -550,148 +282,8 @@ void loop_111()
   delay(4000);
 
 
-  while(1) {};
-
   
   
-  
-  motor_PWM = 15;
-  
-  for ( loop_cnt = 7 ; loop_cnt > 0 ; loop_cnt-- )
-  {
-    reset_encoder_count();
-    Serial.print("motor_reverse (%): "); Serial.print(motor_PWM); Serial.print("-----"); 
-    motor_reverse(motor_PWM);    // 
-
-    for ( i = 20 ; i > 0 ; i-- )
-    {
-      delay(200);
-      l_faster = get_encoder( &encoder );
-      if ( l_faster > 0 )
-      {
-        // slow down the left wheel
-      } else if ( l_faster < 0 )
-      {
-        // speed up the left wheel
-      } // else equal, do nothing
-      Serial.print("left enc cnt : "); Serial.print(encoder.l_encoder_count);
-      Serial.print("    righ enc cnt : "); Serial.println(encoder.r_encoder_count);
-    }
-    motor_PWM += 10;
-  }
-
-  motor_stop();
-  delay(4000);
-
-
-  
-  
-  while(1) {};
-
-
-
-
-
-
-
-
-
-  Serial.println("motor_forward(15%)");
-  motor_PWM = 15;
-  motor_forward(motor_PWM);    // 
-  start_encoder_count(5000);
-
-  Serial.print("A0 : ");
-  vcc_volt = analogRead(A0)*5*3/1023;
-  Serial.println(vcc_volt);
-
-  Serial.println("motor_stop(0%)");
-  motor_stop();    // 0%
-  delay(2000);
-  Serial.print("A0 : ");
-  vcc_volt = analogRead(A0)*5*3/1023;
-  Serial.println(vcc_volt);
-
-
-  Serial.println("motor_forward(20%)");
-  motor_PWM = 20;
-  motor_forward(motor_PWM);    // 
-  start_encoder_count(5000);
-  Serial.print("A0 : ");
-  vcc_volt = analogRead(A0)*5*3/1023;
-  Serial.println(vcc_volt);
-
-  Serial.println("motor_stop(0%)");
-  motor_stop();    // 0%
-  delay(2000);
-  Serial.print("A0 : ");
-  vcc_volt = analogRead(A0)*5*3/1023;
-  Serial.println(vcc_volt);
-
-  Serial.println("motor_forward(30%)");
-  motor_PWM = 30;
-  motor_forward(motor_PWM);    // 
-  start_encoder_count(5000); 
-  Serial.print("A0 : ");
-  vcc_volt = analogRead(A0)*5*3/1023;
-  Serial.println(vcc_volt);
-
-  Serial.println("motor_stop(0%)");
-  Serial.println("====================================");
-  motor_stop();    // 0%
-  Serial.print("A0 : ");
-  vcc_volt = analogRead(A0)*5*3/1023;
-  Serial.println(vcc_volt);
-  delay(2000);
-  //------------------------------------------------------
-
-  motor_PWM = 15;
-  Serial.println("motor_reverse(15%)");
-  motor_reverse(motor_PWM);    // 
-  start_encoder_count(5000);
-  Serial.print("A0 : ");
-  vcc_volt = analogRead(A0)*5*3/1023;
-  Serial.println(vcc_volt);
-
-  Serial.println("motor_stop(0%)");
-  motor_stop();    // 0%
-  Serial.print("A0 : ");
-  vcc_volt = analogRead(A0)*5*3/1023;
-  Serial.println(vcc_volt);
-  delay(2000);
-
-  Serial.println("motor_reverse(20%)");
-  motor_PWM = 20;
-  motor_reverse(motor_PWM);    // 
-  start_encoder_count(5000);
-  Serial.print("A0 : ");
-  vcc_volt = analogRead(A0)*5*3/1023;
-  Serial.println(vcc_volt);
-
-  Serial.println("motor_stop(0%)");
-  motor_stop();    // 0%
-  Serial.print("A0 : ");
-  vcc_volt = analogRead(A0)*5*3/1023;
-  Serial.println(vcc_volt);
-  delay(2000);
-
-  Serial.println("motor_reverse(30%)");
-  motor_PWM = 30;
-  motor_reverse(motor_PWM);    // 
-  start_encoder_count(5000); 
-  Serial.print("A0 : ");
-  vcc_volt = analogRead(A0)*5*3/1023;
-  Serial.println(vcc_volt);
-
-  Serial.println("motor_stop(0%)");
-  Serial.println("====================================");
-  motor_stop();    // 0%
-  Serial.print("A0 : ");
-  vcc_volt = analogRead(A0)*5*3/1023;
-  Serial.println(vcc_volt);
-  delay(2000);
-  //------------------------------------------------------
-
 
   //------------------------------------------------------
   Serial.println("END OF TEST");

@@ -1,15 +1,5 @@
 #include "motor_ctlr.h"
 
-// TY: This section of definition of motor is finely trimmed and projected
-// please do not change any of the motor orientation, motor connection, and i/o ports for the L298 H-bridge in1..in4
-// without discuss with me
-
-/*
-#define MOTOR_L 1
-#define MOTOR_R 0
-#define DIR_FWD 1
-#define DIR_REV 0
-*/
 #define DIR_IO_IDX 0
 #define PWM_IO_IDX 1
 
