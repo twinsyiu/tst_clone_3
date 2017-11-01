@@ -3,7 +3,7 @@
 
 #define OUT_OF_RANGE_DIST_CM 200
 // UltraSound module
-const int trigPin = 8; 
+const int f_trigPin = 8; 
 const int r_trigPin = 10; 
 const int l_trigPin = 11; 
 
