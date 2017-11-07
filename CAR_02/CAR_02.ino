@@ -1,6 +1,8 @@
 #include "motor_ctlr.h"
 #include "encoder.h"
 #include "UltraSound.h"
+#include <Wire.h>   // use I2C library
+#include <LiquidCrystal_I2C.h> // // use LiquidCrystal_I2C FC-113, install lib required
 
 float vcc_volt;
 const byte ults_interrupt_pin = 3;
@@ -8,6 +10,10 @@ int ults_echo_chg_cnt = 0;
 unsigned long echo_hi_ts_us = 0;
 unsigned long echo_lo_ts_us = 0;
 const int buzzerPin = 9;
+
+// initialize the library with the numbers of the interface pins
+LiquidCrystal_I2C lcd(0x27,16,2); // set the LCD address to 0x27 for a 16 chars and 2 line display
+
 
 void setup() 
 {
@@ -28,7 +34,7 @@ void setup()
   }
 */
   ultrasound_init( );
-  attachInterrupt(digitalPinToInterrupt(ults_interrupt_pin), ults_echo_chg, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(ults_interrupt_pin), ults_echo_chg_isr, CHANGE);
   
   // Timer0 is already used for millis() - we'll just interrupt somewhere
   // in the middle and call the "Compare A" function below
@@ -37,18 +43,28 @@ void setup()
 
   interrupts(); // enable all interrupts
   buzzerPin_setup();
+  EE_24C32_setup();
+
+  echo_hi_ts_us = 0;
+  echo_lo_ts_us = 0;
+
+  lcd.init(); //initialize the lcd
+  lcd.backlight(); //open the backlight 
 
 }
 
-void ults_echo_chg() 
+// the ISR of ultrasound echo line level change
+void ults_echo_chg_isr() 
 {
   ults_echo_chg_cnt++;
   if ( digitalRead(com_echoPin) )
   {
+    // when the echo pin is HI, record the hi-timestamp
     echo_hi_ts_us = micros();
   } 
   else
   {
+    // when the echo pin is LO, record the lo-timestamp
     echo_lo_ts_us = micros();
   }
 }
@@ -75,132 +91,77 @@ float f_dist, l_dist, r_dist;
 
 void loop()
 {
-  int ms_ts;
-  long duration;
+  //int ms_ts;
+  //long duration;
   String stringOne;
+  unsigned int motor_PWM;
 
-  song_loop();
-  
-  stringOne = "front dist: ";
-  echo_hi_ts_us = 0;
-  echo_lo_ts_us = 0;
-  
-  //ultrasound_trig();
-  // put your main code here, to run repeatedly:
-  digitalWrite(f_trigPin, LOW); 
-  delayMicroseconds(2); 
-  digitalWrite(f_trigPin, HIGH); 
-  delayMicroseconds(10); 
-  digitalWrite(f_trigPin, LOW); 
+//  EE_24C32_loop();
+//  song_loop();
 
-  // Serial.print("front dist: "); Serial.println( constrain(duration * 3.43 / 2 , 0 , 399) );
-  delay(100);
-  stringOne += ults_echo_chg_cnt;
+  f_dist = ultrasound_read_cm( F_ULTA_ID );
+  l_dist = ultrasound_read_cm( L_ULTA_ID );
+  r_dist = ultrasound_read_cm( R_ULTA_ID );
 
-  f_dist = -1;
-
-  // when the folloing conditions met, then it is a valid ultrasound measurement
-  //   1. echo_hi_ts_us (micros timestamp) is not 0, ie there was a lo->hi change on the common-echo pin
-  //   2. echo_lo_ts_us (micros timestamp) is not 0, ie there was a hi->lo change on the common-echo pin
-  //   3. echo_lo_ts_us > echo_hi_ts_us, ie the edge changes was from lo->hi then hi->lo
-  //   4. digitalRead(com_echoPin) is lo
-  
-  if ( echo_hi_ts_us && echo_lo_ts_us && (echo_lo_ts_us > echo_hi_ts_us ) && !digitalRead(com_echoPin) )
-  {
-    // this is a valid return from the ultrasound sensor
-    //Serial.print("front dist: "); Serial.println( constrain((echo_lo_ts_us - echo_hi_ts_us) * 3.43 / 200 , 0 , 399) );
-    f_dist = constrain((echo_lo_ts_us - echo_hi_ts_us) * 3.43 / 200 , 0 , 399);
-  } else if ( !echo_hi_ts_us )
-  {
-    Serial.println("front dist: echo_hi_ts_us is 0"); 
-  } else if ( !echo_lo_ts_us )
-  {
-    Serial.println("front dist: echo_lo_ts_us is 0"); 
-  } else if ( echo_hi_ts_us >= echo_lo_ts_us )
-  {
-    Serial.println("front dist: echo_hi_ts_us >= echo_lo_ts_us"); 
-  } else if (digitalRead(com_echoPin))
-  {
-    Serial.println("front dist: com_echoPin is HI"); 
-  } else
-  {
-    Serial.println("front dist: unknown error"); 
-  }
- 
-
-  digitalWrite(l_trigPin, LOW); 
-  delayMicroseconds(2); 
-  digitalWrite(l_trigPin, HIGH); 
-  delayMicroseconds(10); 
-  digitalWrite(l_trigPin, LOW); 
-
-  // Serial.print("left dist: "); Serial.println( constrain(duration * 3.43 / 2 , 0 , 399) );
-  delay(100);
-  stringOne = "left dist: ";
-  stringOne += ults_echo_chg_cnt;
-
-  l_dist = -1;
-  if ( echo_hi_ts_us && echo_lo_ts_us && (echo_lo_ts_us > echo_hi_ts_us ) && !digitalRead(com_echoPin) )
-  {
-    // Serial.print("left dist: "); Serial.println( constrain((echo_lo_ts_us - echo_hi_ts_us) * 3.43 / 200 , 0 , 399) );
-    l_dist = constrain((echo_lo_ts_us - echo_hi_ts_us) * 3.43 / 200 , 0 , 399);
-  } else if ( !echo_hi_ts_us )
-  {
-    Serial.println("left dist: echo_hi_ts_us is 0"); 
-  } else if ( !echo_lo_ts_us )
-  {
-    Serial.println("left dist: echo_lo_ts_us is 0"); 
-  } else if ( echo_hi_ts_us >= echo_lo_ts_us )
-  {
-    Serial.println("left dist: echo_hi_ts_us >= echo_lo_ts_us"); 
-  } else if (digitalRead(com_echoPin))
-  {
-    Serial.println("left dist: com_echoPin is HI"); 
-  } else
-  {
-    Serial.println("left dist: unknown error"); 
-  }
- 
-
-  digitalWrite(r_trigPin, LOW); 
-  delayMicroseconds(2); 
-  digitalWrite(r_trigPin, HIGH); 
-  delayMicroseconds(10); 
-  digitalWrite(r_trigPin, LOW); 
-
-  delay(100);
-  stringOne = "right dist: ";
-  stringOne += ults_echo_chg_cnt;
-  r_dist = -1;
-  if ( echo_hi_ts_us && echo_lo_ts_us && (echo_lo_ts_us > echo_hi_ts_us ) && !digitalRead(com_echoPin) )
-  {
-    //Serial.print("right dist: "); Serial.println( constrain((echo_lo_ts_us - echo_hi_ts_us) * 3.43 / 200 , 0 , 399) );
-    r_dist = constrain((echo_lo_ts_us - echo_hi_ts_us) * 3.43 / 200 , 0 , 399);
-  } else if ( !echo_hi_ts_us )
-  {
-    Serial.println("right dist: echo_hi_ts_us is 0"); 
-  } else if ( !echo_lo_ts_us )
-  {
-    Serial.println("right dist: echo_lo_ts_us is 0"); 
-  } else if ( echo_hi_ts_us >= echo_lo_ts_us )
-  {
-    Serial.println("right dist: echo_hi_ts_us >= echo_lo_ts_us"); 
-  } else if (digitalRead(com_echoPin))
-  {
-    Serial.println("right dist: com_echoPin is HI"); 
-  } else
-  {
-    Serial.println("right dist: unknown error"); 
-  }
  
   stringOne = "left/front/right dist: ";
   stringOne += l_dist; stringOne += " / ";
   stringOne += f_dist; stringOne += " / ";
   stringOne += r_dist;
-  Serial.println(stringOne);
+  Serial.print(stringOne);
   
   
-  delay(500);
+  delay(200);
+
+  lcd.setCursor(0,0); // set the cursor to column 0, line 0
+  lcd.print(l_dist); // Print l_dist to the LCD.
+
+  lcd.setCursor(8,0); // set the cursor to column 5, line 0
+  lcd.print(f_dist); // Print l_dist to the LCD.
+
+  lcd.setCursor(8,1); // set the cursor to column 10, line 0
+  lcd.print(r_dist); // Print l_dist to the LCD.
+
+  motor_PWM = 15;
+  if ( f_dist > 30 )
+  {
+    motor_forward(motor_PWM);
+    Serial.println(" move forward");
+    lcd.setCursor(0,1); // set the cursor to column 0, line 1
+    lcd.print("   F   "); // Print F to the LCD.
+    
+  } 
+  else
+  {
+    if ( (l_dist < 20) && (r_dist < 20) )
+    {
+      motor_reverse(motor_PWM + 5);
+      Serial.println(" move reverse");
+      lcd.setCursor(0,1); // set the cursor to column 0, line 1
+      lcd.print("   V   "); // Print F to the LCD.
+    }
+    else
+    if ( l_dist > r_dist )
+    {
+      motor_turn_left(motor_PWM + 5);
+      Serial.println(" turn left");
+      lcd.setCursor(0,1); // set the cursor to column 0, line 1
+      lcd.print(" <     "); // Print < to the LCD.
+      
+    }
+    else
+    {
+      motor_turn_right(motor_PWM + 5);
+      Serial.println(" turn right");
+      lcd.setCursor(0,1); // set the cursor to column 0, line 1
+      lcd.print("     > "); // Print < to the LCD.
+      
+    }
+    
+    
+  }
+
+  
 }
 
 
