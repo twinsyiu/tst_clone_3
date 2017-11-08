@@ -14,6 +14,19 @@ const int buzzerPin = 9;
 // initialize the library with the numbers of the interface pins
 LiquidCrystal_I2C lcd(0x27,16,2); // set the LCD address to 0x27 for a 16 chars and 2 line display
 
+enum movement_st 
+{
+  MVSTATE_STOP,
+  MVSTATE_GO_FWD,
+  MVSTATE_TURN_LEFT,
+  MVSTATE_TURN_RIGHT,
+  MVSTATE_LEFT_90,
+  MVSTATE_RIGHT_90,
+  MVSTATE_TURN_180,
+  MVSTATE_TRAPPED
+};
+
+
 
 void setup() 
 {
@@ -87,83 +100,227 @@ ISR(TIMER1_COMPA_vect) // timer compare interrupt service routine
 {
 }
 
-float f_dist, l_dist, r_dist;
+float f_dist, l_dist, r_dist, tg_f, tg_l, tg_r;
 
 void loop()
 {
   //int ms_ts;
   //long duration;
   String stringOne;
-  unsigned int motor_PWM;
+  unsigned int motor_PWM, movement_state;
 
 //  EE_24C32_loop();
 //  song_loop();
 
-  f_dist = ultrasound_read_cm( F_ULTA_ID );
-  l_dist = ultrasound_read_cm( L_ULTA_ID );
-  r_dist = ultrasound_read_cm( R_ULTA_ID );
+  int change_state_ms_ts;
 
- 
-  stringOne = "left/front/right dist: ";
-  stringOne += l_dist; stringOne += " / ";
-  stringOne += f_dist; stringOne += " / ";
-  stringOne += r_dist;
-  Serial.print(stringOne);
+  // determine terrain state
+  // if ( f_dist > 30 )
+  movement_state = MVSTATE_STOP;
+  motor_PWM = 20;
   
+  while (1)
+  {
+    f_dist = ultrasound_read_cm( F_ULTA_ID );
+    l_dist = ultrasound_read_cm( L_ULTA_ID );
+    r_dist = ultrasound_read_cm( R_ULTA_ID );
+   
+    stringOne = "left/front/right dist: ";
+    stringOne += l_dist; stringOne += " / ";
+    stringOne += f_dist; stringOne += " / ";
+    stringOne += r_dist;
+    Serial.print(stringOne);
+    
+    delay(200);
   
-  delay(200);
+    lcd.setCursor(0,0); // set the cursor to column 0, line 0
+    lcd.print(l_dist); // Print l_dist to the LCD.
+  
+    lcd.setCursor(8,0); // set the cursor to column 5, line 0
+    lcd.print(f_dist); // Print l_dist to the LCD.
+  
+    lcd.setCursor(8,1); // set the cursor to column 10, line 0
+    lcd.print(r_dist); // Print l_dist to the LCD.
 
-  lcd.setCursor(0,0); // set the cursor to column 0, line 0
-  lcd.print(l_dist); // Print l_dist to the LCD.
-
-  lcd.setCursor(8,0); // set the cursor to column 5, line 0
-  lcd.print(f_dist); // Print l_dist to the LCD.
-
-  lcd.setCursor(8,1); // set the cursor to column 10, line 0
-  lcd.print(r_dist); // Print l_dist to the LCD.
-
-  motor_PWM = 15;
-  if ( f_dist > 30 )
-  {
-    motor_forward(motor_PWM);
-    Serial.println(" move forward");
-    lcd.setCursor(0,1); // set the cursor to column 0, line 1
-    lcd.print("   F   "); // Print F to the LCD.
-    
-  } 
-  else
-  {
-    if ( (l_dist < 20) && (r_dist < 20) )
+    switch (movement_state)
     {
-      motor_reverse(motor_PWM + 5);
-      Serial.println(" move reverse");
-      lcd.setCursor(0,1); // set the cursor to column 0, line 1
-      lcd.print("   V   "); // Print F to the LCD.
+      case MVSTATE_STOP:
+        Serial.println(" MVSTATE_STOP");
+        lcd.setCursor(0,1); // set the cursor to column 0, line 1
+        lcd.print("   0   "); // Print < to the LCD.
+
+        if ( f_dist > 40 )
+        {
+          movement_state = MVSTATE_GO_FWD;
+          motor_forward( motor_PWM );
+        }
+        else if ( l_dist > 40 )
+        {
+          movement_state = MVSTATE_TURN_LEFT;
+          motor_turn_left( motor_PWM );
+        }
+        else if ( r_dist > 40 )
+        {
+          movement_state = MVSTATE_TURN_RIGHT;
+          motor_turn_right( motor_PWM );
+        }
+        else
+        {
+          movement_state = MVSTATE_TRAPPED;
+          motor_reverse( motor_PWM );
+        }
+        break;
+
+      case MVSTATE_GO_FWD:
+        Serial.println(" MVSTATE_GO_FWD");
+        lcd.setCursor(0,1); // set the cursor to column 0, line 1
+        lcd.print("   ^   "); // Print < to the LCD.
+
+        if ( f_dist < 40 )
+        {
+          if ( l_dist > 40 )
+          {
+            tg_r = f_dist;
+            tg_f = l_dist;
+          motor_turn_left( motor_PWM );
+            movement_state = MVSTATE_LEFT_90;
+          }
+          else if ( r_dist > 40 )
+          {
+            tg_l = f_dist;
+            tg_f = r_dist;
+          motor_turn_right( motor_PWM );
+            movement_state = MVSTATE_RIGHT_90;
+          }
+          else
+          {
+            tg_l = r_dist;
+            tg_r = l_dist;
+          motor_turn_right( motor_PWM );
+            movement_state = MVSTATE_TURN_180;
+          }
+          change_state_ms_ts = millis();
+        } else if ( l_dist < 30 )
+        {
+          motor_turn_right( motor_PWM );
+          movement_state = MVSTATE_TURN_RIGHT;
+        } else if ( r_dist < 30 )
+        {
+          motor_turn_left( motor_PWM );
+          movement_state = MVSTATE_TURN_LEFT;
+        }
+
+
+        break;
+
+      case MVSTATE_TURN_LEFT:
+        Serial.println(" MVSTATE_TURN_LEFT");
+        lcd.setCursor(0,1); // set the cursor to column 0, line 1
+        lcd.print("  <    "); // Print < to the LCD.
+
+        if ( ( f_dist > 40 ) && ( r_dist > 30 ) )
+        {
+          motor_forward( motor_PWM );
+          movement_state = MVSTATE_GO_FWD;
+        }
+        break;
+
+      case MVSTATE_TURN_RIGHT:
+        Serial.println(" MVSTATE_TURN_RIGHT");
+        lcd.setCursor(0,1); // set the cursor to column 0, line 1
+        lcd.print("    >  "); // Print < to the LCD.
+
+        if ( ( f_dist > 40 ) && ( l_dist > 30 ) )
+        {
+          motor_forward( motor_PWM );
+          movement_state = MVSTATE_GO_FWD;
+        }
+        break;
+
+      case MVSTATE_LEFT_90:
+        Serial.println(" MVSTATE_LEFT_90");
+        lcd.setCursor(0,1); // set the cursor to column 0, line 1
+        lcd.print(" <<    "); // Print < to the LCD.
+
+        if ( close_to ( r_dist, tg_r, 5 ) && close_to ( f_dist, tg_f, 5 ) )
+        {
+          motor_forward( motor_PWM );
+          movement_state = MVSTATE_GO_FWD;
+        } else if ( ( millis() - change_state_ms_ts ) > 2000 )
+        {
+          motor_stop();
+          movement_state = MVSTATE_STOP;
+        }
+        break;
+        
+      case MVSTATE_RIGHT_90:
+        Serial.println(" MVSTATE_RIGHT_90");
+        lcd.setCursor(0,1); // set the cursor to column 0, line 1
+        lcd.print("    >> "); // Print < to the LCD.
+
+        if ( close_to ( l_dist, tg_l, 5 ) && close_to ( f_dist, tg_f, 5 ) )
+        {
+          motor_forward( motor_PWM );
+          movement_state = MVSTATE_GO_FWD;
+        } else if ( ( millis() - change_state_ms_ts ) > 2000 )
+        {
+          motor_stop();
+          movement_state = MVSTATE_STOP;
+        }
+
+        break;
+        
+      case MVSTATE_TURN_180:
+        Serial.println(" MVSTATE_TURN_180");
+        lcd.setCursor(0,1); // set the cursor to column 0, line 1
+        lcd.print(" << >> "); // Print < to the LCD.
+
+        if ( close_to ( l_dist, tg_l, 5 ) && close_to ( r_dist, tg_r, 5 ) )
+        {
+          motor_forward( motor_PWM );
+          movement_state = MVSTATE_GO_FWD;
+        } else if ( ( millis() - change_state_ms_ts ) > 2000 )
+        {
+          motor_stop();
+          movement_state = MVSTATE_STOP;
+        }
+
+        break;
+        
+      case MVSTATE_TRAPPED:
+      default:
+        Serial.println(" MVSTATE_TRAPPED");
+        lcd.setCursor(0,1); // set the cursor to column 0, line 1
+        lcd.print(" ||=|| "); // Print < to the LCD.
+
+        break;
     }
-    else
-    if ( l_dist > r_dist )
-    {
-      motor_turn_left(motor_PWM + 5);
-      Serial.println(" turn left");
-      lcd.setCursor(0,1); // set the cursor to column 0, line 1
-      lcd.print(" <     "); // Print < to the LCD.
-      
-    }
-    else
-    {
-      motor_turn_right(motor_PWM + 5);
-      Serial.println(" turn right");
-      lcd.setCursor(0,1); // set the cursor to column 0, line 1
-      lcd.print("     > "); // Print < to the LCD.
-      
-    }
-    
-    
   }
-
-  
 }
 
+bool close_to ( float a, float b, int percent )
+{
+  float diff;
+  if ( a < 0 || b < 0 )
+    return false;
+  if ( a == b )
+    return true;
+    
+  if ( b > a )
+  {
+    diff = (b - a) * 100 / b ;
+  }
+  else
+  {
+    diff = (a - b) * 100 / a ;
+  }
+
+  if ( diff < percent )
+  {
+    return true;
+  }
+  return false;
+}
 
 //
 // previous loop() to test the encoder feedback which adjust the left wheel PWM to ensure straight line movement.
@@ -421,3 +578,83 @@ int frequency(char note)
   return(0);  // We looked through everything and didn't find it,
               // but we still need to return a value, so return 0.
 }
+
+
+void loop_not_fn_20171108()
+{
+  //int ms_ts;
+  //long duration;
+  String stringOne;
+  unsigned int motor_PWM;
+
+//  EE_24C32_loop();
+//  song_loop();
+
+  f_dist = ultrasound_read_cm( F_ULTA_ID );
+  l_dist = ultrasound_read_cm( L_ULTA_ID );
+  r_dist = ultrasound_read_cm( R_ULTA_ID );
+
+ 
+  stringOne = "left/front/right dist: ";
+  stringOne += l_dist; stringOne += " / ";
+  stringOne += f_dist; stringOne += " / ";
+  stringOne += r_dist;
+  Serial.print(stringOne);
+  
+  
+  delay(200);
+
+  lcd.setCursor(0,0); // set the cursor to column 0, line 0
+  lcd.print(l_dist); // Print l_dist to the LCD.
+
+  lcd.setCursor(8,0); // set the cursor to column 5, line 0
+  lcd.print(f_dist); // Print l_dist to the LCD.
+
+  lcd.setCursor(8,1); // set the cursor to column 10, line 0
+  lcd.print(r_dist); // Print l_dist to the LCD.
+
+  // determine terrain state
+  // ... TBC
+
+
+
+  motor_PWM = 15;
+  if ( f_dist > 30 )
+  {
+    motor_forward(motor_PWM);
+    Serial.println(" move forward");
+    lcd.setCursor(0,1); // set the cursor to column 0, line 1
+    lcd.print("   F   "); // Print F to the LCD.
+    
+  } 
+  else
+  {
+    if ( (l_dist < 20) && (r_dist < 20) )
+    {
+      motor_reverse(motor_PWM + 5);
+      Serial.println(" move reverse");
+      lcd.setCursor(0,1); // set the cursor to column 0, line 1
+      lcd.print("   V   "); // Print F to the LCD.
+    }
+    else
+    if ( l_dist > r_dist )
+    {
+      motor_turn_left(motor_PWM + 5);
+      Serial.println(" turn left");
+      lcd.setCursor(0,1); // set the cursor to column 0, line 1
+      lcd.print(" <     "); // Print < to the LCD.
+      
+    }
+    else
+    {
+      motor_turn_right(motor_PWM + 5);
+      Serial.println(" turn right");
+      lcd.setCursor(0,1); // set the cursor to column 0, line 1
+      lcd.print("     > "); // Print < to the LCD.
+      
+    }
+    
+    
+  }
+}
+

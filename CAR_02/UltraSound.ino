@@ -69,7 +69,8 @@ float ultrasound_read_cm( int ulta_id  )
     Serial.println("ERROR dist: echo_hi_ts_us is 0"); 
   } else if ( !echo_lo_ts_us )
   {
-    Serial.println("ERROR dist: echo_lo_ts_us is 0"); 
+    Serial.println("echo_lo_ts_us is 0, out of range, MAX 399cm"); 
+    return 399;
   } else if ( echo_hi_ts_us >= echo_lo_ts_us )
   {
     Serial.println("ERROR dist: echo_hi_ts_us >= echo_lo_ts_us"); 
