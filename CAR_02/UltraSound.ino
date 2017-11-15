@@ -47,7 +47,7 @@ float ultrasound_read_cm( int ulta_id  )
   delayMicroseconds(10); 
   digitalWrite(ulta_trigPin[ulta_id], LOW); 
 
-  delay(20);
+  delay(40);
 
   ulta_dist = -1;
 
@@ -67,22 +67,27 @@ float ultrasound_read_cm( int ulta_id  )
   } else if ( !echo_hi_ts_us )
   {
     Serial.println("ERROR dist: echo_hi_ts_us is 0"); 
+    ulta_dist = -2;
+
   } else if ( !echo_lo_ts_us )
   {
     Serial.println("echo_lo_ts_us is 0, out of range, MAX 399cm"); 
-    return 399;
+    return 377;
   } else if ( echo_hi_ts_us >= echo_lo_ts_us )
   {
     Serial.println("ERROR dist: echo_hi_ts_us >= echo_lo_ts_us"); 
+    ulta_dist = 333;
   } else if (digitalRead(com_echoPin))
   {
     Serial.println("ERROR dist: com_echoPin is HI"); 
+    ulta_dist = -4;
   } else
   {
     Serial.println("ERROR dist: unknown error"); 
+    ulta_dist = -5;
   }
   
-  return -1.0;
+  return ulta_dist;
  
 
 }
