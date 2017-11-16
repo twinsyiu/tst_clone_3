@@ -140,6 +140,7 @@ void loop()
         lcd.print("                "); // Print < to the LCD.
         lcd.setCursor(0,1); // set the cursor to column 0, line 1
         lcd.print("   0            "); // Print < to the LCD.
+        //display_dist("   0   ");
         delay(200);
 
         if ( f_dist > 40 )
@@ -179,8 +180,9 @@ void loop()
 
       case MVSTATE_GO_FWD:
         //Serial.println(" MVST_FWD");
-        lcd.setCursor(0,1); // set the cursor to column 0, line 1
-        lcd.print("   ^   "); // Print < to the LCD.
+        display_dist("   ^   ");
+//        lcd.setCursor(0,1); // set the cursor to column 0, line 1
+//        lcd.print("   ^   "); // Print < to the LCD.
         delay(200);
 
         // try to go straight, adjust pwm if necessary
@@ -314,8 +316,9 @@ void loop()
       //case MVSTATE_TURN_LEFT:
       case MVSTATE_KEEP_LEFT:
         //Serial.println(" MVST_KP_L");
-        lcd.setCursor(0,1); // set the cursor to column 0, line 1
-        lcd.print("   |>  "); // Print < to the LCD.
+        //lcd.setCursor(0,1); // set the cursor to column 0, line 1
+        //lcd.print("   |>  "); // Print < to the LCD.
+        display_dist("   |>  ");
         delay(200);
 
         if ( f_dist < 40 )
@@ -356,8 +359,9 @@ void loop()
       //case MVSTATE_TURN_RIGHT:
       case MVSTATE_KEEP_RIGHT:
         //Serial.println(" MVST_KP_R");
-        lcd.setCursor(0,1); // set the cursor to column 0, line 1
-        lcd.print("  <|   "); // Print < to the LCD.
+        //lcd.setCursor(0,1); // set the cursor to column 0, line 1
+        //lcd.print("  <|   "); // Print < to the LCD.
+        display_dist("  <|   ");
         delay(200);
 
         if ( f_dist < 40 )
@@ -398,9 +402,10 @@ void loop()
       case MVSTATE_TURN_LEFT:
       //case 100:
         //Serial.println(" MVST_TN_L");
-        lcd.setCursor(0,1); // set the cursor to column 0, line 1
-        lcd.print("  <    "); // Print < to the LCD.
-        //delay(200);
+        //lcd.setCursor(0,1); // set the cursor to column 0, line 1
+        //lcd.print("  <    "); // Print < to the LCD.
+        display_dist("  <    ");
+        delay(200);
 
         if ( f_dist > 40 )
         {
@@ -425,6 +430,7 @@ void loop()
           {
             movement_state = MVSTATE_TRAPPED;
             motor_reverse( motor_PWM );
+            change_state_ms_ts = millis();
             continue;
           }
           movement_state = MVSTATE_TURN_RIGHT;
@@ -438,9 +444,10 @@ void loop()
       //case 101:
       case MVSTATE_TURN_RIGHT:
         //Serial.println(" MVST_TN_R");
-        lcd.setCursor(0,1); // set the cursor to column 0, line 1
-        lcd.print("    >  "); // Print < to the LCD.
-        //delay(200);
+        //lcd.setCursor(0,1); // set the cursor to column 0, line 1
+        //lcd.print("    >  "); // Print < to the LCD.
+        display_dist("    >  ");
+        delay(200);
 
         if ( f_dist > 40 )
         {
@@ -465,6 +472,7 @@ void loop()
           {
             movement_state = MVSTATE_TRAPPED;
             motor_reverse( motor_PWM );
+            change_state_ms_ts = millis();
             continue;
           }
           movement_state = MVSTATE_TURN_LEFT;
@@ -474,7 +482,7 @@ void loop()
           
         }
         break;
-
+/*
       case MVSTATE_LEFT_90:
         //Serial.println(" MVST_L_90");
         lcd.setCursor(0,1); // set the cursor to column 0, line 1
@@ -543,12 +551,14 @@ void loop()
         }
 
         break;
-        
+*/        
       case MVSTATE_TRAPPED:
       default:
         //Serial.println("MVST_TRAP");
-        lcd.setCursor(0,1); // set the cursor to column 0, line 1
-        lcd.print(" ||=|| "); // Print < to the LCD.
+        //lcd.setCursor(0,1); // set the cursor to column 0, line 1
+        //lcd.print(" ||=|| "); // Print < to the LCD.
+        display_dist(" ||=|| ");
+        
         delay(200);
        if ( l_dist > 30 )
         {
@@ -823,17 +833,25 @@ void Task_Speedo( void *pvParameters __attribute__((unused)) )  // This is a Tas
     f_dist = ultr_dist[F_ULTA_ID];
     l_dist = ultr_dist[L_ULTA_ID];
     r_dist = ultr_dist[R_ULTA_ID];
-   
-    lcd.setCursor(0,0); // set the cursor to column 0, line 0
-    lcd.print(l_dist); // Print l_dist to the LCD.
-  
-    lcd.setCursor(8,0); // set the cursor to column 5, line 0
-    lcd.print(f_dist); // Print l_dist to the LCD.
-  
-    lcd.setCursor(8,1); // set the cursor to column 10, line 0
-    lcd.print(r_dist); // Print l_dist to the LCD.
 
+/*
+*/
     vTaskDelay(200 / portTICK_PERIOD_MS);  // nof tick delay (45ms)
   }
+}
+
+void display_dist (char * dir_str)
+{
+  lcd.setCursor(0,0); // set the cursor to column 0, line 0
+  lcd.print(l_dist); // Print l_dist to the LCD.
+  
+  lcd.setCursor(8,0); // set the cursor to column 5, line 0
+  lcd.print(f_dist); // Print l_dist to the LCD.
+  
+  lcd.setCursor(0,1); // set the cursor to column 0, line 1
+  lcd.print(dir_str); // Print < to the LCD.
+
+  lcd.setCursor(8,1); // set the cursor to column 10, line 0
+  lcd.print(r_dist); // Print l_dist to the LCD.
 }
 
