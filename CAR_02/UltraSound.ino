@@ -13,9 +13,28 @@ void ultrasound_init( void )
   pinMode(com_echoPin, INPUT); 
   pinMode(r_trigPin, OUTPUT); 
   pinMode(l_trigPin, OUTPUT); 
+
+  attachInterrupt(digitalPinToInterrupt(ults_interrupt_pin), ults_echo_chg_isr, CHANGE);
 }
 
 long int start_us_ts;
+
+// the ISR of ultrasound echo line level change
+void ults_echo_chg_isr( void ) 
+{
+  ults_echo_chg_cnt++;
+  if ( digitalRead(com_echoPin) )
+  {
+    // when the echo pin is HI, record the hi-timestamp
+    echo_hi_ts_us = micros();
+  } 
+  else
+  {
+    // when the echo pin is LO, record the lo-timestamp
+    echo_lo_ts_us = micros();
+  }
+}
+
 
 void ultrasound_trig( unsigned int trigger_pin ) 
 {
@@ -29,7 +48,23 @@ void ultrasound_trig( unsigned int trigger_pin )
   digitalWrite(trigger_pin, LOW); 
 }
 
+void ultrasound_trigger( int ulta_id  ) 
+{
+  echo_hi_ts_us = 0;
+  echo_lo_ts_us = 0;
+
+  //ultrasound_trig();
+  // put your main code here, to run repeatedly:
+  digitalWrite(ulta_trigPin[ulta_id], LOW); 
+  delayMicroseconds(2); 
+  digitalWrite(ulta_trigPin[ulta_id], HIGH); 
+  delayMicroseconds(10); 
+  digitalWrite(ulta_trigPin[ulta_id], LOW); 
+}
+
+
 float ulta_dist;
+
 
 float ultrasound_read_cm( int ulta_id  ) 
 {

@@ -56,9 +56,6 @@ void i2c_eeprom_read_buffer( int deviceaddress, unsigned int eeaddress, byte *bu
         if (Wire.available()) buffer[c] = Wire.read();
 }
 
-
-
-
 void EE_24C32_setup()
 {
     char somedata[] = "this is data from the eeprom"; // data to write
