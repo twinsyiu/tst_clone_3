@@ -100,22 +100,23 @@ ISR(TIMER1_COMPA_vect) // timer compare interrupt service routine
 float f_dist, l_dist, r_dist, tg_f, tg_l, tg_r;
 const int lcd_delay = 20;
 const int action_delay = 200;
-
+unsigned int prev_l_encoder = 0;
+unsigned int prev_r_encoder = 0;
+unsigned int prev_ts = 0;
+unsigned int max_avg_slots_per_s, avg_slots_per_s, slots_per_s;
+encoder_Struct encoder;
+int l_faster, prev_l_faster;
+bool is_stuck = false;
 
 void loop()
 {
   unsigned int motor_PWM, movement_state, l_motor_PWM, r_motor_PWM;
-  encoder_Struct encoder;
-  int l_faster, prev_l_faster;
+  
 
 //  EE_24C32_loop();
 //  song_loop();
 
   int change_state_ms_ts;
-  unsigned int prev_l_encoder = 0;
-  unsigned int prev_r_encoder = 0;
-  unsigned int prev_ts = 0;
-  unsigned int max_avg_slots_per_s, avg_slots_per_s, slots_per_s;
 
   movement_state = MVSTATE_STOP;
   motor_PWM = 20;
@@ -141,11 +142,12 @@ void loop()
           prev_l_faster = 0;
           l_motor_PWM = r_motor_PWM = motor_PWM;
           
-          prev_l_encoder = 0;
+          /*prev_l_encoder = 0;
           prev_r_encoder = 0;
           prev_ts = 0;
           max_avg_slots_per_s = 0;
-          avg_slots_per_s = 0;
+          avg_slots_per_s = 0;*/
+          reset_prev_encoder();
         }
         else if ( (l_dist > r_dist) && (l_dist > 40) )
         {
@@ -181,46 +183,6 @@ void loop()
         // =============================================
         l_faster = get_encoder( &encoder );
 
-        // check if it is stucked
-        // =============================================
-        if ( (prev_l_encoder == 0) && (prev_r_encoder == 0) && (prev_ts == 0) )
-        {
-          prev_l_encoder = encoder.l_encoder_count;
-          prev_r_encoder = encoder.r_encoder_count;
-          prev_ts = encoder.encoder_ts;
-        }
-        else
-        {
-          // if ( (encoder.l_encoder_count) && (encoder.r_encoder_count) && (encoder.encoder_ts) )
-          
-          if ( encoder.encoder_ts )
-          {
-            slots_per_s = 1000 * (( encoder.l_encoder_count - prev_l_encoder ) + ( encoder.r_encoder_count - prev_r_encoder )) / ( encoder.encoder_ts - prev_ts );
-            Serial.println(slots_per_s);
-            avg_slots_per_s = (avg_slots_per_s + slots_per_s) / 2;
-            if ( avg_slots_per_s > max_avg_slots_per_s )
-            {
-              max_avg_slots_per_s = avg_slots_per_s;
-            } 
-            else if ( avg_slots_per_s < (max_avg_slots_per_s / 5) )
-            {
-              // IT IS STUCKED
-              movement_state = MVSTATE_TRAPPED;
-              change_state_ms_ts = millis();
-              motor_reverse( motor_PWM );
-              break;
-            }
-            else
-            {
-              // remember the encoder value
-              prev_l_encoder = encoder.l_encoder_count;
-              prev_r_encoder = encoder.r_encoder_count;
-              prev_ts = encoder.encoder_ts;
-              
-            }
-          }
-        }
-        
         // try to keep it running straight line
         // =============================================
         if ( l_faster > 0 )
@@ -284,6 +246,14 @@ void loop()
 
         delay(action_delay);
 
+        // detect if stucked
+        if (is_stuck)
+        {
+          movement_state = MVSTATE_TRAPPED;
+          change_state_ms_ts = millis();
+          motor_reverse( motor_PWM );
+          break;
+        }
 
         // check if it is blocked by any object
         // =============================================
@@ -330,8 +300,6 @@ void loop()
           change_state_ms_ts = millis();
         }
         delay(action_delay);
-
-        // detect if stucked
         
         break;
 
@@ -344,27 +312,24 @@ void loop()
           motor_stop();
           movement_state = MVSTATE_STOP;
           change_state_ms_ts = millis();
-          continue;
+          break;
         }
 
         if ( l_dist > 40 )
         {
-          l_motor_PWM -= 1;
-          r_motor_PWM += 1;
-          if ( l_motor_PWM < 15 )
-            l_motor_PWM = 15;
-        } else if ( l_dist > 35 )
-        {
-          //motor_forward( motor_PWM );
-          l_motor_PWM = r_motor_PWM = motor_PWM;
+          // go forward
+          movement_state = MVSTATE_GO_FWD;
+          motor_forward( motor_PWM );
           reset_encoder_count();
           prev_l_faster = 0;
-        } else if ( l_dist < 30 )
-        {
-          l_motor_PWM += 1;
-          r_motor_PWM -= 1;
-          if ( r_motor_PWM < 15 )
-            r_motor_PWM = 15;
+          l_motor_PWM = r_motor_PWM = motor_PWM;
+          
+          /*prev_l_encoder = 0;
+          prev_r_encoder = 0;
+          prev_ts = 0;
+          max_avg_slots_per_s = 0;
+          avg_slots_per_s = 0;*/
+          reset_prev_encoder();
         }
         motor_drive_sp( MOTOR_L, DIR_FWD, l_motor_PWM );
         motor_drive_sp( MOTOR_R, DIR_FWD, r_motor_PWM );
@@ -383,27 +348,25 @@ void loop()
           motor_stop();
           movement_state = MVSTATE_STOP;
           change_state_ms_ts = millis();
-          continue;
+          break;
         }
+        
         if ( r_dist > 40 )
         {
-          r_motor_PWM -= 1;
-          l_motor_PWM += 1;
-          if ( r_motor_PWM < 15 )
-            r_motor_PWM = 15;
-        } else if ( r_dist > 35 )
-        {  
+          // go forward
+          movement_state = MVSTATE_GO_FWD;
           motor_forward( motor_PWM );
-          l_motor_PWM = r_motor_PWM = motor_PWM;
           reset_encoder_count();
           prev_l_faster = 0;
-          
-        } else if ( r_dist < 30 )
-        {
-          r_motor_PWM += 1;
-          l_motor_PWM -= 1;
-          if ( l_motor_PWM < 15 )
-            l_motor_PWM = 15;
+          l_motor_PWM = r_motor_PWM = motor_PWM;
+
+          /*
+          prev_l_encoder = 0;
+          prev_r_encoder = 0;
+          prev_ts = 0;
+          max_avg_slots_per_s = 0;
+          avg_slots_per_s = 0; */
+          reset_prev_encoder();
         }
         motor_drive_sp( MOTOR_L, DIR_FWD, l_motor_PWM );
         motor_drive_sp( MOTOR_R, DIR_FWD, r_motor_PWM );
@@ -492,7 +455,8 @@ void loop()
         display_dist(" ||=|| ");
         delay(lcd_delay);
 
-       if ( (l_dist > 40) || (r_dist > 40) )
+        delay(2000);
+        if ( (l_dist > 40) || (r_dist > 40) )
         {
           motor_stop();
           change_state_ms_ts = millis();
@@ -758,6 +722,51 @@ void Task_Speedo( void *pvParameters __attribute__((unused)) )  // This is a Tas
 /*
 */
     vTaskDelay(200 / portTICK_PERIOD_MS);  // nof tick delay (45ms)
+
+    // check if it the wheel stucked
+    // =============================================
+    l_faster = get_encoder( &encoder );
+    
+    if ( (prev_l_encoder == 0) && (prev_r_encoder == 0) && (prev_ts == 0) )
+    {
+      prev_l_encoder = encoder.l_encoder_count;
+      prev_r_encoder = encoder.r_encoder_count;
+      prev_ts = encoder.encoder_ts;
+      avg_slots_per_s = 0;
+      max_avg_slots_per_s = 0;
+      is_stuck = false;
+    }
+    else
+    {
+      // if ( (encoder.l_encoder_count) && (encoder.r_encoder_count) && (encoder.encoder_ts) )
+      
+      if ( encoder.encoder_ts )
+      {
+        slots_per_s = 1000 * (( encoder.l_encoder_count - prev_l_encoder ) + ( encoder.r_encoder_count - prev_r_encoder )) / ( encoder.encoder_ts - prev_ts );
+        Serial.println(slots_per_s);
+        avg_slots_per_s = (avg_slots_per_s + slots_per_s) / 2;
+        if ( avg_slots_per_s > max_avg_slots_per_s )
+        {
+          max_avg_slots_per_s = avg_slots_per_s;
+          is_stuck = false;
+        } 
+        else if ( avg_slots_per_s < (max_avg_slots_per_s / 5) )
+        {
+          // IT IS STUCKED
+          is_stuck = true;
+        }
+        else
+        {
+          // remember the encoder value
+          prev_l_encoder = encoder.l_encoder_count;
+          prev_r_encoder = encoder.r_encoder_count;
+          prev_ts = encoder.encoder_ts;
+          is_stuck = false;
+          
+        }
+      }
+    }
+    
   }
 }
 
@@ -776,4 +785,11 @@ void display_dist (char * dir_str)
   lcd.print(r_dist); // Print l_dist to the LCD.
 }
 
+void reset_prev_encoder (void)
+{
+  prev_l_encoder =  prev_r_encoder = prev_ts = 0;
+  max_avg_slots_per_s = 0;
+  avg_slots_per_s = 0;
+        
+}
 
