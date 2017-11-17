@@ -8,12 +8,6 @@
 #include <LiquidCrystal_I2C.h> // // use LiquidCrystal_I2C FC-113, install lib required
 
 float vcc_volt;
-/*
-const byte ults_interrupt_pin = 3;
-int ults_echo_chg_cnt = 0;
-unsigned long echo_hi_ts_us = 0;
-unsigned long echo_lo_ts_us = 0;
-*/
 const int buzzerPin = 9;
 
 // initialize the library with the numbers of the interface pins
@@ -25,15 +19,10 @@ enum movement_st
   MVSTATE_GO_FWD,
   MVSTATE_TURN_LEFT,
   MVSTATE_TURN_RIGHT,
-  MVSTATE_LEFT_90,
-  MVSTATE_RIGHT_90,
-  MVSTATE_TURN_180,
-  MVSTATE_TRAPPED,
   MVSTATE_KEEP_LEFT,
-  MVSTATE_KEEP_RIGHT
+  MVSTATE_KEEP_RIGHT,
+  MVSTATE_TRAPPED
 };
-
-
 
 void setup() 
 {
@@ -102,7 +91,6 @@ void setup()
     ,  NULL );
 
 
-
 }
 
 ISR(TIMER1_COMPA_vect) // timer compare interrupt service routine
@@ -110,12 +98,12 @@ ISR(TIMER1_COMPA_vect) // timer compare interrupt service routine
 }
 
 float f_dist, l_dist, r_dist, tg_f, tg_l, tg_r;
+const int lcd_delay = 20;
+const int action_delay = 200;
+
 
 void loop()
 {
-  //int ms_ts;
-  //long duration;
-//  String stringOne;
   unsigned int motor_PWM, movement_state, l_motor_PWM, r_motor_PWM;
   encoder_Struct encoder;
   int l_faster, prev_l_faster;
@@ -124,9 +112,11 @@ void loop()
 //  song_loop();
 
   int change_state_ms_ts;
+  unsigned int prev_l_encoder = 0;
+  unsigned int prev_r_encoder = 0;
+  unsigned int prev_ts = 0;
+  unsigned int max_avg_slots_per_s, avg_slots_per_s, slots_per_s;
 
-  // determine terrain state
-  // if ( f_dist > 30 )
   movement_state = MVSTATE_STOP;
   motor_PWM = 20;
   
@@ -140,21 +130,26 @@ void loop()
         lcd.print("                "); // Print < to the LCD.
         lcd.setCursor(0,1); // set the cursor to column 0, line 1
         lcd.print("   0            "); // Print < to the LCD.
-        //display_dist("   0   ");
-        delay(200);
+        delay(lcd_delay);
 
         if ( f_dist > 40 )
         {
-          //Serial.println("_FWD");
+          // go forward
           movement_state = MVSTATE_GO_FWD;
           motor_forward( motor_PWM );
           reset_encoder_count();
           prev_l_faster = 0;
           l_motor_PWM = r_motor_PWM = motor_PWM;
+          
+          prev_l_encoder = 0;
+          prev_r_encoder = 0;
+          prev_ts = 0;
+          max_avg_slots_per_s = 0;
+          avg_slots_per_s = 0;
         }
         else if ( (l_dist > r_dist) && (l_dist > 40) )
         {
-          //Serial.println("TN_L");
+          // go left if l > r && l > r
           movement_state = MVSTATE_TURN_LEFT;
           change_state_ms_ts = millis();
           motor_PWM = 16;
@@ -162,7 +157,7 @@ void loop()
         }
         else if ( r_dist > 40 )
         {
-          //Serial.println("TN_R");
+          // go right if r > 40
           movement_state = MVSTATE_TURN_RIGHT;
           change_state_ms_ts = millis();
           motor_PWM = 16;
@@ -170,29 +165,64 @@ void loop()
         }
         else
         {
-          //Serial.println("TRAP");
+          // else it is trapped, reverse
           movement_state = MVSTATE_TRAPPED;
           change_state_ms_ts = millis();
           motor_reverse( motor_PWM );
         }
-        delay(200);
+        delay(action_delay);
         break;
 
       case MVSTATE_GO_FWD:
-        //Serial.println(" MVST_FWD");
         display_dist("   ^   ");
-//        lcd.setCursor(0,1); // set the cursor to column 0, line 1
-//        lcd.print("   ^   "); // Print < to the LCD.
-        delay(200);
+        delay(lcd_delay);
 
         // try to go straight, adjust pwm if necessary
         // =============================================
         l_faster = get_encoder( &encoder );
+
+        // check if it is stucked
+        // =============================================
+        if ( (prev_l_encoder == 0) && (prev_r_encoder == 0) && (prev_ts == 0) )
+        {
+          prev_l_encoder = encoder.l_encoder_count;
+          prev_r_encoder = encoder.r_encoder_count;
+          prev_ts = encoder.encoder_ts;
+        }
+        else
+        {
+          // if ( (encoder.l_encoder_count) && (encoder.r_encoder_count) && (encoder.encoder_ts) )
+          
+          if ( encoder.encoder_ts )
+          {
+            slots_per_s = 1000 * (( encoder.l_encoder_count - prev_l_encoder ) + ( encoder.r_encoder_count - prev_r_encoder )) / ( encoder.encoder_ts - prev_ts );
+            Serial.println(slots_per_s);
+            avg_slots_per_s = (avg_slots_per_s + slots_per_s) / 2;
+            if ( avg_slots_per_s > max_avg_slots_per_s )
+            {
+              max_avg_slots_per_s = avg_slots_per_s;
+            } 
+            else if ( avg_slots_per_s < (max_avg_slots_per_s / 5) )
+            {
+              // IT IS STUCKED
+              movement_state = MVSTATE_TRAPPED;
+              change_state_ms_ts = millis();
+              motor_reverse( motor_PWM );
+              break;
+            }
+            else
+            {
+              // remember the encoder value
+              prev_l_encoder = encoder.l_encoder_count;
+              prev_r_encoder = encoder.r_encoder_count;
+              prev_ts = encoder.encoder_ts;
+              
+            }
+          }
+        }
         
-//        Serial.print("= left enc cnt : "); Serial.print(encoder.l_encoder_count);
-//        Serial.print(" right enc cnt : "); Serial.print(encoder.r_encoder_count);
-//        Serial.print(" :: ");
-         
+        // try to keep it running straight line
+        // =============================================
         if ( l_faster > 0 )
         { // l_faster > 0 : left wheel is faster
           // compensate by slow down the left wheel
@@ -212,8 +242,6 @@ void loop()
               if ( (r_motor_PWM >= motor_PWM) && ((r_motor_PWM - motor_PWM) < 10) )
                 r_motor_PWM += 1;
           }
-          
-//          Serial.print("(-) ");
         } 
         else if ( l_faster < 0 )
         { //   l_faster < 0 : left wheel is slower
@@ -237,51 +265,45 @@ void loop()
             }            
 
           }
-//          Serial.print("(+) ");
         } // else equal, do nothing
         else
         { // l_faster is 0 ; ie the encoder counters are equal, the best time to reset the counters
-//          Serial.print("( ) ");
           reset_encoder_count();
           prev_l_faster = 0;
           l_motor_PWM = r_motor_PWM = motor_PWM;
-        } // else equal, do nothing
+        }
+
+        // PWM balancing between the l & r motor PWM
         PWM_adjust (&l_motor_PWM, &r_motor_PWM, 5, motor_PWM);
 
         motor_drive_sp( MOTOR_L, DIR_FWD, l_motor_PWM );
         motor_drive_sp( MOTOR_R, DIR_FWD, r_motor_PWM );
 
-        
+        // remember the l_faster status for next calculation
         prev_l_faster = l_faster;
-        //Serial.print(l_motor_PWM); Serial.print(" | "); Serial.println(r_motor_PWM);
-//        Serial.print("    left enc cnt : "); Serial.print(encoder.l_encoder_count);
-//        Serial.print("    righ enc cnt : "); Serial.println(encoder.r_encoder_count);
 
-        delay(200);
+        delay(action_delay);
 
 
+        // check if it is blocked by any object
+        // =============================================
         if ( f_dist < 40 )
         {
           if (( l_dist >= r_dist ) && ( l_dist > 40 ))
           {
-            tg_r = f_dist;
-            tg_f = l_dist;
             motor_turn_left( motor_PWM - 5 );
-            movement_state = MVSTATE_LEFT_90;
+            movement_state = MVSTATE_TURN_LEFT;
           }
           else if ( r_dist > 40 )
           {
-            tg_l = f_dist;
-            tg_f = r_dist;
             motor_turn_right( motor_PWM - 5 );
-            movement_state = MVSTATE_RIGHT_90;
+            movement_state = MVSTATE_TURN_RIGHT;
           }
           else
           {
-            tg_l = r_dist;
-            tg_r = l_dist;
-            motor_turn_right( motor_PWM - 5 );
-            movement_state = MVSTATE_RIGHT_90;  // use right turn to achieve the 180 degree turn 
+            movement_state = MVSTATE_TRAPPED;
+            change_state_ms_ts = millis();
+            motor_reverse( motor_PWM );
           }
           change_state_ms_ts = millis();
         } 
@@ -307,19 +329,15 @@ void loop()
           motor_drive_sp( MOTOR_R, DIR_FWD, r_motor_PWM );
           change_state_ms_ts = millis();
         }
-        delay(200);
+        delay(action_delay);
 
         // detect if stucked
         
         break;
 
-      //case MVSTATE_TURN_LEFT:
       case MVSTATE_KEEP_LEFT:
-        //Serial.println(" MVST_KP_L");
-        //lcd.setCursor(0,1); // set the cursor to column 0, line 1
-        //lcd.print("   |>  "); // Print < to the LCD.
         display_dist("   |>  ");
-        delay(200);
+        delay(lcd_delay);
 
         if ( f_dist < 40 )
         {
@@ -337,7 +355,7 @@ void loop()
             l_motor_PWM = 15;
         } else if ( l_dist > 35 )
         {
-          motor_forward( motor_PWM );
+          //motor_forward( motor_PWM );
           l_motor_PWM = r_motor_PWM = motor_PWM;
           reset_encoder_count();
           prev_l_faster = 0;
@@ -352,17 +370,13 @@ void loop()
         motor_drive_sp( MOTOR_R, DIR_FWD, r_motor_PWM );
           
         // detect if stucked
-        delay(200);
+        delay(action_delay);
 
         break;
         
-      //case MVSTATE_TURN_RIGHT:
       case MVSTATE_KEEP_RIGHT:
-        //Serial.println(" MVST_KP_R");
-        //lcd.setCursor(0,1); // set the cursor to column 0, line 1
-        //lcd.print("  <|   "); // Print < to the LCD.
         display_dist("  <|   ");
-        delay(200);
+        delay(lcd_delay);
 
         if ( f_dist < 40 )
         {
@@ -395,17 +409,13 @@ void loop()
         motor_drive_sp( MOTOR_R, DIR_FWD, r_motor_PWM );
 
         // detect if stucked
-        delay(200);
+        delay(action_delay);
 
         break;
 
       case MVSTATE_TURN_LEFT:
-      //case 100:
-        //Serial.println(" MVST_TN_L");
-        //lcd.setCursor(0,1); // set the cursor to column 0, line 1
-        //lcd.print("  <    "); // Print < to the LCD.
         display_dist("  <    ");
-        delay(200);
+        delay(lcd_delay);
 
         if ( f_dist > 40 )
         {
@@ -441,13 +451,9 @@ void loop()
         }
         break;
 
-      //case 101:
       case MVSTATE_TURN_RIGHT:
-        //Serial.println(" MVST_TN_R");
-        //lcd.setCursor(0,1); // set the cursor to column 0, line 1
-        //lcd.print("    >  "); // Print < to the LCD.
         display_dist("    >  ");
-        delay(200);
+        delay(lcd_delay);
 
         if ( f_dist > 40 )
         {
@@ -482,103 +488,21 @@ void loop()
           
         }
         break;
-/*
-      case MVSTATE_LEFT_90:
-        //Serial.println(" MVST_L_90");
-        lcd.setCursor(0,1); // set the cursor to column 0, line 1
-        lcd.print(" [<    "); // Print < to the LCD.
-
-        //if ( close_to ( r_dist, tg_r, 5 ) && close_to ( f_dist, tg_f, 5 ) )
-        if ( f_dist > 40 )
-        {
-          motor_forward( motor_PWM );
-          movement_state = MVSTATE_GO_FWD;
-          reset_encoder_count();
-          prev_l_faster = 0;
-          l_motor_PWM = r_motor_PWM = motor_PWM;
-        } else if ( ( millis() - change_state_ms_ts ) > 500 )
-        {
-          motor_stop();
-          change_state_ms_ts = millis();
-          movement_state = MVSTATE_STOP;
-        }
-
-        delay(200);
-
-        break;
-        
-      case MVSTATE_RIGHT_90:
-        //Serial.println(" MVST_R_90");
-        lcd.setCursor(0,1); // set the cursor to column 0, line 1
-        lcd.print("    >] "); // Print < to the LCD.
-
-        //if ( close_to ( l_dist, tg_l, 5 ) && close_to ( f_dist, tg_f, 5 ) )
-        if ( f_dist > 40 )
-        {
-          motor_forward( motor_PWM );
-          movement_state = MVSTATE_GO_FWD;
-          reset_encoder_count();
-          prev_l_faster = 0;
-          l_motor_PWM = r_motor_PWM = motor_PWM;
-        } else if ( ( millis() - change_state_ms_ts ) > 500 )
-        {
-          motor_stop();
-          change_state_ms_ts = millis();
-          movement_state = MVSTATE_STOP;
-        }
-
-        delay(200);
-        break;
-        
-      case MVSTATE_TURN_180:
-        //Serial.println(" MVST_T180");
-        lcd.setCursor(0,1); // set the cursor to column 0, line 1
-        lcd.print("   v   "); // Print < to the LCD.
-        delay(200);
-
-        if ( close_to ( l_dist, tg_l, 5 ) && close_to ( r_dist, tg_r, 5 ) )
-        {
-          motor_forward( motor_PWM );
-          movement_state = MVSTATE_GO_FWD;
-          reset_encoder_count();
-          prev_l_faster = 0;
-          l_motor_PWM = r_motor_PWM = motor_PWM;
-        } else if ( ( millis() - change_state_ms_ts ) > 2000 )
-        {
-          motor_stop();
-          change_state_ms_ts = millis();
-          movement_state = MVSTATE_STOP;
-        }
-
-        break;
-*/        
       case MVSTATE_TRAPPED:
-      default:
-        //Serial.println("MVST_TRAP");
-        //lcd.setCursor(0,1); // set the cursor to column 0, line 1
-        //lcd.print(" ||=|| "); // Print < to the LCD.
         display_dist(" ||=|| ");
-        
-        delay(200);
-       if ( l_dist > 30 )
+        delay(lcd_delay);
+
+       if ( (l_dist > 40) || (r_dist > 40) )
         {
+          motor_stop();
           change_state_ms_ts = millis();
-          movement_state = MVSTATE_TURN_LEFT;
-          motor_PWM = 16;
-          motor_turn_left( motor_PWM );
-          continue;
-        }
-        if ( r_dist > 30 )
-        {
-          change_state_ms_ts = millis();
-          movement_state = MVSTATE_TURN_RIGHT;
-          motor_PWM = 16;
-          motor_turn_right( motor_PWM );
-          continue;
-          
+          movement_state = MVSTATE_STOP;
         }
 
         break;
+      default:
+        display_dist("@.@.@.@");
+        delay(lcd_delay);
     }
   }
 }
@@ -804,9 +728,6 @@ void Task_Speedo( void *pvParameters __attribute__((unused)) )  // This is a Tas
 {
   int ulta_expire_time_ms;    // when no ultrasound echo within this time, it will expire
   unsigned long start_trig_ts_ms, start_measure_ts_ms;
-  String stringOne;
-
-//Serial.println("Tk_Spdo 1");
 
   for (;;) // A Task shall never return or exit.
   {
@@ -854,4 +775,5 @@ void display_dist (char * dir_str)
   lcd.setCursor(8,1); // set the cursor to column 10, line 0
   lcd.print(r_dist); // Print l_dist to the LCD.
 }
+
 

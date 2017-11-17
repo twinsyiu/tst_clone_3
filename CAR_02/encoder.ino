@@ -59,6 +59,7 @@ int get_encoder( encoder_Struct *encoder )
 {
   encoder->l_encoder_count = l_encoder_count;
   encoder->r_encoder_count = r_encoder_count;
+  encoder->encoder_ts = millis();
   return ( l_encoder_count - r_encoder_count );
   
 }

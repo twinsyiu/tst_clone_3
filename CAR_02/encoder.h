@@ -9,6 +9,7 @@ typedef struct
 {
   unsigned int l_encoder_count;
   unsigned int r_encoder_count;
+  unsigned int encoder_ts;
 } encoder_Struct;
 
 void encoder_update();
