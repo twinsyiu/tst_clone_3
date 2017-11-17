@@ -61,7 +61,7 @@ void setup()
   }
   delay(1000);
 
-  //lcd.init(); //initialize the lcd
+  lcd.clear(); //initialize the lcd
   
   ultrasound_init( );
 
@@ -127,10 +127,13 @@ void loop()
     {
       case MVSTATE_STOP:
         //Serial.println(" MVST_STOP");
+        /*
         lcd.setCursor(0,0); // set the cursor to column 0, line 0
         lcd.print("                "); // Print < to the LCD.
         lcd.setCursor(0,1); // set the cursor to column 0, line 1
         lcd.print("   0            "); // Print < to the LCD.
+        */
+        display_dist("   0   ");
         delay(lcd_delay);
 
         if ( f_dist > 40 )
@@ -140,7 +143,20 @@ void loop()
           motor_forward( motor_PWM );
           reset_encoder_count();
           prev_l_faster = 0;
-          l_motor_PWM = r_motor_PWM = motor_PWM;
+
+          int x;
+          if ( (x = millis() % 3) == 0 )
+          {
+            l_motor_PWM = r_motor_PWM = motor_PWM;
+          } else if ( x == 1 )
+          {
+            l_motor_PWM = motor_PWM + 1;
+            r_motor_PWM = motor_PWM - 1;
+          } else
+          {
+            l_motor_PWM = motor_PWM - 1;
+            r_motor_PWM = motor_PWM + 1;
+          }
           
           /*prev_l_encoder = 0;
           prev_r_encoder = 0;
@@ -148,6 +164,10 @@ void loop()
           max_avg_slots_per_s = 0;
           avg_slots_per_s = 0;*/
           reset_prev_encoder();
+
+          
+          motor_drive_sp( MOTOR_L, DIR_FWD, l_motor_PWM );
+          motor_drive_sp( MOTOR_R, DIR_FWD, r_motor_PWM );
         }
         else if ( (l_dist > r_dist) && (l_dist > 40) )
         {
@@ -156,6 +176,7 @@ void loop()
           change_state_ms_ts = millis();
           motor_PWM = 16;
           motor_turn_left( motor_PWM );
+          reset_prev_encoder();
         }
         else if ( r_dist > 40 )
         {
@@ -164,6 +185,7 @@ void loop()
           change_state_ms_ts = millis();
           motor_PWM = 16;
           motor_turn_right( motor_PWM );
+          reset_prev_encoder();
         }
         else
         {
@@ -232,7 +254,7 @@ void loop()
         { // l_faster is 0 ; ie the encoder counters are equal, the best time to reset the counters
           reset_encoder_count();
           prev_l_faster = 0;
-          l_motor_PWM = r_motor_PWM = motor_PWM;
+          //l_motor_PWM = r_motor_PWM = motor_PWM;
         }
 
         // PWM balancing between the l & r motor PWM
@@ -263,11 +285,13 @@ void loop()
           {
             motor_turn_left( motor_PWM - 5 );
             movement_state = MVSTATE_TURN_LEFT;
+            reset_prev_encoder();
           }
           else if ( r_dist > 40 )
           {
             motor_turn_right( motor_PWM - 5 );
             movement_state = MVSTATE_TURN_RIGHT;
+            reset_prev_encoder();
           }
           else
           {
@@ -287,6 +311,7 @@ void loop()
           motor_drive_sp( MOTOR_L, DIR_FWD, l_motor_PWM );
           motor_drive_sp( MOTOR_R, DIR_FWD, r_motor_PWM );
           change_state_ms_ts = millis();
+          ///////////////////////////////////////////////////////////reset_prev_encoder();
         } 
         else if ( r_dist < 30 )
         {
@@ -298,6 +323,7 @@ void loop()
           motor_drive_sp( MOTOR_L, DIR_FWD, l_motor_PWM );
           motor_drive_sp( MOTOR_R, DIR_FWD, r_motor_PWM );
           change_state_ms_ts = millis();
+          ////////////////////////////////////////////////////////////reset_prev_encoder();
         }
         delay(action_delay);
         
@@ -334,8 +360,15 @@ void loop()
         motor_drive_sp( MOTOR_L, DIR_FWD, l_motor_PWM );
         motor_drive_sp( MOTOR_R, DIR_FWD, r_motor_PWM );
           
-        // detect if stucked
         delay(action_delay);
+        // detect if stucked
+        if (is_stuck)
+        {
+          movement_state = MVSTATE_TRAPPED;
+          change_state_ms_ts = millis();
+          motor_reverse( motor_PWM );
+          break;
+        }
 
         break;
         
@@ -373,6 +406,14 @@ void loop()
 
         // detect if stucked
         delay(action_delay);
+        // detect if stucked
+        if (is_stuck)
+        {
+          movement_state = MVSTATE_TRAPPED;
+          change_state_ms_ts = millis();
+          motor_reverse( motor_PWM );
+          break;
+        }
 
         break;
 
@@ -386,15 +427,16 @@ void loop()
           motor_forward( motor_PWM );
           movement_state = MVSTATE_GO_FWD;
           reset_encoder_count();
+          reset_prev_encoder();
           prev_l_faster = 0;
           l_motor_PWM = r_motor_PWM = motor_PWM;
-          continue;
+          break;
         } else if ( ( millis() - change_state_ms_ts ) > 500 )
         {
           motor_stop();
           movement_state = MVSTATE_STOP;
           change_state_ms_ts = millis();
-          continue;
+          break;
         }
 
         if ( l_dist < 30 )
@@ -404,13 +446,21 @@ void loop()
             movement_state = MVSTATE_TRAPPED;
             motor_reverse( motor_PWM );
             change_state_ms_ts = millis();
-            continue;
+            break;
           }
           movement_state = MVSTATE_TURN_RIGHT;
           change_state_ms_ts = millis();
           motor_PWM = 16;
           motor_turn_right( motor_PWM );
-          
+          reset_encoder_count();
+        }
+        // detect if stucked
+        if (is_stuck)
+        {
+          movement_state = MVSTATE_TRAPPED;
+          change_state_ms_ts = millis();
+          motor_reverse( motor_PWM );
+          break;
         }
         break;
 
@@ -424,15 +474,16 @@ void loop()
           motor_forward( motor_PWM );
           movement_state = MVSTATE_GO_FWD;
           reset_encoder_count();
+          reset_prev_encoder();
           prev_l_faster = 0;
           l_motor_PWM = r_motor_PWM = motor_PWM;
-          continue;
+          break;
         } else if ( ( millis() - change_state_ms_ts ) > 500 )
         {
           motor_stop();
           movement_state = MVSTATE_STOP;
           change_state_ms_ts = millis();
-          continue;
+          break;
         }
 
         if ( r_dist < 30 )
@@ -442,15 +493,24 @@ void loop()
             movement_state = MVSTATE_TRAPPED;
             motor_reverse( motor_PWM );
             change_state_ms_ts = millis();
-            continue;
+            break;
           }
           movement_state = MVSTATE_TURN_LEFT;
           change_state_ms_ts = millis();
           motor_PWM = 16;
           motor_turn_left( motor_PWM );
-          
+          reset_encoder_count();
         }
-        break;
+         // detect if stucked
+        if (is_stuck)
+        {
+          movement_state = MVSTATE_TRAPPED;
+          change_state_ms_ts = millis();
+          motor_reverse( motor_PWM );
+          break;
+        }
+       break;
+        
       case MVSTATE_TRAPPED:
         display_dist(" ||=|| ");
         delay(lcd_delay);
