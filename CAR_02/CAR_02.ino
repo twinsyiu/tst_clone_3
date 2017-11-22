@@ -107,10 +107,55 @@ unsigned int max_avg_slots_per_s, avg_slots_per_s, slots_per_s;
 encoder_Struct encoder;
 int l_faster, prev_l_faster;
 bool is_stuck = false;
+unsigned int movement_state;
+
+const int LCD_update_period_ms = 250;
+unsigned int next_disp_time_ms;
+
+void dislplay_to_LCD( void )
+{
+  
+  unsigned int current_time;
+
+  current_time = millis();
+  if ( (current_time > next_disp_time_ms) || ( (next_disp_time_ms > 65000) && (current_time < 2000) ) )
+  {
+    next_disp_time_ms = current_time + LCD_update_period_ms;
+    // Serial.print(current_time);Serial.print(" -- ");Serial.println(next_disp_time_ms);
+    switch (movement_state)
+    {
+      case MVSTATE_STOP:            
+        display_dist("   0   ");
+        break;    
+      case MVSTATE_GO_FWD:
+        display_dist("   ^   ");
+        break;    
+      case MVSTATE_KEEP_LEFT:
+        display_dist("   |>  ");
+        break;    
+      case MVSTATE_KEEP_RIGHT:
+        display_dist("  <|   ");
+        break;    
+      case MVSTATE_TURN_LEFT:
+        display_dist("  <    ");
+        break;    
+      case MVSTATE_TURN_RIGHT:
+        display_dist("    >  ");
+        break;    
+      case MVSTATE_TRAPPED:
+        display_dist(" ||=|| ");
+        break;    
+      default:
+        display_dist("@@@@@@@");
+        break;    
+    }
+  }
+}
+
 
 void loop()
 {
-  unsigned int motor_PWM, movement_state, l_motor_PWM, r_motor_PWM;
+  unsigned int motor_PWM, l_motor_PWM, r_motor_PWM;
   
 
 //  EE_24C32_loop();
@@ -123,6 +168,12 @@ void loop()
   
   while (1)
   {
+
+    dislplay_to_LCD();
+    
+    
+    
+    
     switch (movement_state)
     {
       case MVSTATE_STOP:
@@ -133,8 +184,8 @@ void loop()
         lcd.setCursor(0,1); // set the cursor to column 0, line 1
         lcd.print("   0            "); // Print < to the LCD.
         */
-        display_dist("   0   ");
-        delay(lcd_delay);
+        //display_dist("   0   ");
+        //delay(lcd_delay);
 
         if ( f_dist > 40 )
         {
@@ -198,8 +249,8 @@ void loop()
         break;
 
       case MVSTATE_GO_FWD:
-        display_dist("   ^   ");
-        delay(lcd_delay);
+        //display_dist("   ^   ");
+        //delay(lcd_delay);
 
         // try to go straight, adjust pwm if necessary
         // =============================================
@@ -330,8 +381,8 @@ void loop()
         break;
 
       case MVSTATE_KEEP_LEFT:
-        display_dist("   |>  ");
-        delay(lcd_delay);
+        //display_dist("   |>  ");
+        //delay(lcd_delay);
 
         if ( f_dist < 40 )
         {
@@ -373,8 +424,8 @@ void loop()
         break;
         
       case MVSTATE_KEEP_RIGHT:
-        display_dist("  <|   ");
-        delay(lcd_delay);
+        //display_dist("  <|   ");
+        //delay(lcd_delay);
 
         if ( f_dist < 40 )
         {
@@ -418,8 +469,8 @@ void loop()
         break;
 
       case MVSTATE_TURN_LEFT:
-        display_dist("  <    ");
-        delay(lcd_delay);
+        //display_dist("  <    ");
+        //delay(lcd_delay);
 
         if ( f_dist > 40 )
         {
@@ -465,8 +516,8 @@ void loop()
         break;
 
       case MVSTATE_TURN_RIGHT:
-        display_dist("    >  ");
-        delay(lcd_delay);
+        //display_dist("    >  ");
+        //delay(lcd_delay);
 
         if ( f_dist > 40 )
         {
@@ -512,8 +563,8 @@ void loop()
        break;
         
       case MVSTATE_TRAPPED:
-        display_dist(" ||=|| ");
-        delay(lcd_delay);
+        //display_dist(" ||=|| ");
+        //delay(lcd_delay);
 
         delay(2000);
         if ( (l_dist > 40) || (r_dist > 40) )
@@ -770,6 +821,16 @@ void Task_Speedo( void *pvParameters __attribute__((unused)) )  // This is a Tas
           // max 399cm ie 
           ultr_dist[ulta_id] = constrain((echo_lo_ts_us - echo_hi_ts_us) * 3.43 / 200 , 0 , 399);
           break;  // break the do-while loop
+        } 
+        else if ( !echo_lo_ts_us )
+        {
+          // Serial.println("echo_lo_ts_us is 0, out of range, MAX 399cm"); 
+          ultr_dist[ulta_id] =  377;
+        } 
+        else if ( echo_hi_ts_us >= echo_lo_ts_us )
+        {
+          // Serial.println("ERROR dist: echo_hi_ts_us >= echo_lo_ts_us"); 
+          ultr_dist[ulta_id]  = 333;
         }
       }
       while ( (ultr_dist[ulta_id] <= 0) && (( millis() - start_trig_ts_ms ) < 45 ) );    // 
@@ -803,7 +864,7 @@ void Task_Speedo( void *pvParameters __attribute__((unused)) )  // This is a Tas
       if ( encoder.encoder_ts )
       {
         slots_per_s = 1000 * (( encoder.l_encoder_count - prev_l_encoder ) + ( encoder.r_encoder_count - prev_r_encoder )) / ( encoder.encoder_ts - prev_ts );
-        Serial.println(slots_per_s);
+        //// Serial.println(slots_per_s);
         avg_slots_per_s = (avg_slots_per_s + slots_per_s) / 2;
         if ( avg_slots_per_s > max_avg_slots_per_s )
         {
