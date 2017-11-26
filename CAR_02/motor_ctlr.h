@@ -9,13 +9,15 @@
 void motor_stop( void );
 void motor_reverse( unsigned int PWM );
 void motor_forward( unsigned int PWM );
-void motor_left_fwd( unsigned int PWM );
-void motor_left_rev( unsigned int PWM );
-void motor_right_fwd( unsigned int PWM );
-void motor_right_rev( unsigned int PWM );
 void motor_turn_left( unsigned int PWM );
 void motor_turn_right( unsigned int PWM );
 
 void motor_drive_sp( unsigned int L_R, unsigned int Fwd_Rev, unsigned int PWM_Spd);
 
+/*
+void motor_left_fwd( unsigned int PWM );
+void motor_right_fwd( unsigned int PWM );
+void motor_left_rev( unsigned int PWM );
+void motor_right_rev( unsigned int PWM );
+*/
 #endif

@@ -5,11 +5,11 @@
 
 // connect motor controller pins to Arduino digital pins
 // motor one
-const byte in1dir = 7;     //  Dir grey
-const byte in2spd = 6;     //  Speed  white
+const byte in1dir = 7;     //  Direction (grey)
+const byte in2spd = 6;     //  Speed  (white)
 // motor two
-const byte in4spd = 5;     //  Speed blue
-const byte in3dir = 4;     // Dir red
+const byte in4spd = 5;     //  Speed (blue)
+const byte in3dir = 4;     //  Direction (red)
 
 
 unsigned int motor_io[2][2] = {
@@ -28,7 +28,7 @@ void motor_drive_sp( unsigned int L_R, unsigned int Fwd_Rev, unsigned int PWM_Sp
   Serial.print(" PWM=");  Serial.println(PWM_Spd);
   #endif
 
-  // either one of the motor wiring (polarity) are swapped; thus introduced the Fwd_Rev correction
+  // either one of the motor wiring (polarity) are flipped; thus introduced the Fwd_Rev correction
   if (L_R)
   {
     corrected_Fwd_Rev = Fwd_Rev;
@@ -96,6 +96,14 @@ void motor_turn_right( unsigned int PWM )
   motor_drive_sp( MOTOR_L, DIR_FWD, PWM );
 }
 
+void motor_chg_dir( unsigned int l_motor_PWM, unsigned int r_motor_PWM )
+
+{
+  motor_drive_sp( MOTOR_R, DIR_FWD, r_motor_PWM );
+  motor_drive_sp( MOTOR_L, DIR_FWD, l_motor_PWM );
+}
+
+/*
 void motor_right_fwd( unsigned int PWM )
 {
   #ifdef DEBUG 
@@ -127,4 +135,4 @@ void motor_left_rev( unsigned int PWM )
   #endif
   motor_drive_sp( MOTOR_L, DIR_REV, PWM );
 }
-
+*/
