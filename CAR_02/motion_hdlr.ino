@@ -5,6 +5,8 @@ const int action_delay = 200;
 unsigned long current_time;
 unsigned long next_mtr_state_time_ms = 0;
 unsigned long next_motion_stuck_time_ms = 0;
+unsigned int prev_movement_state;
+
 
 void init_motion_handler(void)
 {
@@ -146,11 +148,11 @@ void motion_handler(void)
   switch (movement_state)
   {
     case MVSTATE_TURN_RIGHT:
-      I2C_RGB_LED(R_BL);
-      goto L_R_TURN;
+//      I2C_RGB_LED(R_BL);
+//      goto L_R_TURN;
     case MVSTATE_TURN_LEFT:
-      I2C_RGB_LED(L_BL);
-L_R_TURN:
+//      I2C_RGB_LED(L_BL);
+//L_R_TURN:
       if ( f_dist < 40 )
       {
         // adjust the wick up time
@@ -163,7 +165,7 @@ L_R_TURN:
       break;
 
     case MVSTATE_REV:
-      I2C_RGB_LED(L_BL_R_BL);
+//      I2C_RGB_LED(L_BL_R_BL);
       if ( f_dist < 40 || ( l_dist < 35 && r_dist < 35 ))
       {
         // motor_reverse( motor_PWM );
@@ -190,7 +192,7 @@ L_R_TURN:
       break;
 
     case MVSTATE_STOP:
-      I2C_RGB_LED(ALL_OFF);
+//      I2C_RGB_LED(ALL_OFF);
       l_motor_PWM = r_motor_PWM = motor_PWM; //MY for display_dist
 
       if ( f_dist < 40 || ( l_dist < 35 && r_dist < 35 ) )
@@ -225,7 +227,7 @@ L_R_TURN:
       break;
 
     case MVSTATE_GO_FWD:
-      I2C_RGB_LED(L_WH_R_WH);
+//      I2C_RGB_LED(L_WH_R_WH);
       FWD_straight_adj();
       
       if ( f_dist < 35 || ( l_dist < 25 && r_dist < 25 ) )
@@ -254,7 +256,7 @@ L_R_TURN:
       break;
         
     case MVSTATE_KEEP_LEFT: // due to r_dist < 35
-      I2C_RGB_LED(L_RD);
+//      I2C_RGB_LED(L_RD);
       if ( f_dist < 35)
       {
         movement_state = MVSTATE_STOP;
@@ -276,7 +278,7 @@ L_R_TURN:
       break;
         
     case MVSTATE_KEEP_RIGHT: //due to l_dist < 35
-      I2C_RGB_LED(R_RD);
+//      I2C_RGB_LED(R_RD);
       if ( f_dist < 35)
       {
         movement_state = MVSTATE_STOP;
@@ -307,288 +309,65 @@ L_R_TURN:
       lcd.print(" MOTOR DEAD STOP"); // Print < to the LCD.
       motor_stop();
       break;    
+      
+    case MVSTATE_PAUSE:  
+      //I2C_RGB_LED(ALL_OFF);
+      motor_stop();
+      break;    
     }
 
   
 }
 
-
-
-// previous TY's motion control loop
-// obsoleted
-/*
-void loop()
+void put_motor_pause (void)
 {
-  
-  unsigned long current_time;
-  unsigned long next_mtr_state_time_ms = 0;
-  
-  movement_state = MVSTATE_STOP;
-  motor_PWM = 20;
-  
-  while (1)
-  {
-
-    dislplay_to_LCD();
-    motion_handler();
-    
-
-  current_time = millis();
-  if ( current_time > next_mtr_state_time_ms )
-  {
-    next_mtr_state_time_ms = current_time + action_delay;
-    Serial.print(current_time);Serial.print(" -- ");Serial.println(next_mtr_state_time_ms);
-    
-    
-    switch (movement_state)
-    {
-      case MVSTATE_STOP:
-        Serial.println(" MVST_STOP");
-        MVSTATE_STOP_Hdlr();
-        break;
-
-      case MVSTATE_GO_FWD:
-        GO_FWD_straight_line_Hdlr();
-
-        // PWM balancing between the l & r motor PWM
-        PWM_adjust (&l_motor_PWM, &r_motor_PWM, 5, motor_PWM);
-
-        motor_drive_sp( MOTOR_L, DIR_FWD, l_motor_PWM );
-        motor_drive_sp( MOTOR_R, DIR_FWD, r_motor_PWM );
-
-        // remember the l_faster status for next calculation
-        prev_l_faster = l_faster;
-
-        // detect if stucked
-        if (is_stuck)
-        {
-          movement_state = MVSTATE_TRAPPED;
-          change_state_ms_ts = millis();
-          motor_reverse( motor_PWM );
-          break;
-        }
-
-        // check if it is blocked by any object
-        // =============================================
-        if ( f_dist < 40 )
-        {
-          if (( l_dist >= r_dist ) && ( l_dist > 40 ))
-          {
-            motor_turn_left( motor_PWM - 5 );
-            movement_state = MVSTATE_TURN_LEFT;
-            init_wheel_stuck_check();
-          }
-          else if ( r_dist > 40 )
-          {
-            motor_turn_right( motor_PWM - 5 );
-            movement_state = MVSTATE_TURN_RIGHT;
-            init_wheel_stuck_check();
-          }
-          else
-          {
-            movement_state = MVSTATE_TRAPPED;
-            change_state_ms_ts = millis();
-            motor_reverse( motor_PWM );
-          }
-          change_state_ms_ts = millis();
-        } 
-        else if ( l_dist < 30 )
-        {
-          //motor_turn_right( motor_PWM );
-          movement_state = MVSTATE_KEEP_LEFT;
-          reset_encoder_count();
-          l_motor_PWM = motor_PWM + 2;
-          r_motor_PWM = motor_PWM - 2;
-          motor_drive_sp( MOTOR_L, DIR_FWD, l_motor_PWM );
-          motor_drive_sp( MOTOR_R, DIR_FWD, r_motor_PWM );
-          change_state_ms_ts = millis();
-        } 
-        else if ( r_dist < 30 )
-        {
-          // motor_turn_left( motor_PWM );
-          movement_state = MVSTATE_KEEP_RIGHT;
-          reset_encoder_count();
-          l_motor_PWM = motor_PWM - 2;
-          r_motor_PWM = motor_PWM + 2;
-          motor_drive_sp( MOTOR_L, DIR_FWD, l_motor_PWM );
-          motor_drive_sp( MOTOR_R, DIR_FWD, r_motor_PWM );
-          change_state_ms_ts = millis();
-        }
-        
-        break;
-
-      case MVSTATE_KEEP_LEFT:
-        if ( f_dist < 40 )
-        {
-          motor_stop();
-          movement_state = MVSTATE_STOP;
-          change_state_ms_ts = millis();
-          break;
-        }
-
-        if ( l_dist > 40 )
-        {
-          // go forward
-          movement_state = MVSTATE_GO_FWD;
-          motor_forward( motor_PWM );
-          reset_encoder_count();
-          prev_l_faster = 0;
-          l_motor_PWM = r_motor_PWM = motor_PWM;
-          
-          init_wheel_stuck_check();
-        }
-        motor_drive_sp( MOTOR_L, DIR_FWD, l_motor_PWM );
-        motor_drive_sp( MOTOR_R, DIR_FWD, r_motor_PWM );
-          
-        // detect if stucked
-        if (is_stuck)
-        {
-          movement_state = MVSTATE_TRAPPED;
-          change_state_ms_ts = millis();
-          motor_reverse( motor_PWM );
-          break;
-        }
-
-        break;
-        
-      case MVSTATE_KEEP_RIGHT:
-        //display_dist("  <|   ");
-        //delay(lcd_delay);
-
-        if ( f_dist < 40 )
-        {
-          motor_stop();
-          movement_state = MVSTATE_STOP;
-          change_state_ms_ts = millis();
-          break;
-        }
-        
-        if ( r_dist > 40 )
-        {
-          // go forward
-          movement_state = MVSTATE_GO_FWD;
-          motor_forward( motor_PWM );
-          reset_encoder_count();
-          prev_l_faster = 0;
-          l_motor_PWM = r_motor_PWM = motor_PWM;
-
-          init_wheel_stuck_check();
-        }
-        motor_drive_sp( MOTOR_L, DIR_FWD, l_motor_PWM );
-        motor_drive_sp( MOTOR_R, DIR_FWD, r_motor_PWM );
-
-        // detect if stucked
-        if (is_stuck)
-        {
-          movement_state = MVSTATE_TRAPPED;
-          change_state_ms_ts = millis();
-          motor_reverse( motor_PWM );
-          break;
-        }
-
-        break;
-
-      case MVSTATE_TURN_LEFT:
-        //display_dist("  <    ");
-        //delay(lcd_delay);
-
-        if ( f_dist > 40 )
-        {
-          motor_PWM = 20;
-          motor_forward( motor_PWM );
-          movement_state = MVSTATE_GO_FWD;
-          reset_encoder_count();
-          init_wheel_stuck_check();
-          prev_l_faster = 0;
-          l_motor_PWM = r_motor_PWM = motor_PWM;
-          break;
-        } else if ( ( millis() - change_state_ms_ts ) > 500 )
-        {
-          motor_stop();
-          movement_state = MVSTATE_STOP;
-          change_state_ms_ts = millis();
-          break;
-        }
-
-        if ( l_dist < 30 )
-        {
-          movement_state = MVSTATE_TRAPPED;
-          motor_reverse( motor_PWM );
-          change_state_ms_ts = millis();
-          break;
-        }
-
-        // detect if stucked
-        if (is_stuck)
-        {
-          movement_state = MVSTATE_TRAPPED;
-          change_state_ms_ts = millis();
-          motor_reverse( motor_PWM );
-          break;
-        }
-        break;
-
-      case MVSTATE_TURN_RIGHT:
-        if ( f_dist > 40 )
-        {
-          motor_PWM = 20;
-          motor_forward( motor_PWM );
-          movement_state = MVSTATE_GO_FWD;
-          reset_encoder_count();
-          init_wheel_stuck_check();
-          prev_l_faster = 0;
-          l_motor_PWM = r_motor_PWM = motor_PWM;
-          break;
-        } else if ( ( millis() - change_state_ms_ts ) > 500 )
-        {
-          motor_stop();
-          movement_state = MVSTATE_STOP;
-          change_state_ms_ts = millis();
-          break;
-        }
-
-        if ( r_dist < 30 )
-        {
-          if ( l_dist < 30 )
-          {
-            movement_state = MVSTATE_TRAPPED;
-            motor_reverse( motor_PWM );
-            change_state_ms_ts = millis();
-            break;
-          }
-          movement_state = MVSTATE_TURN_LEFT;
-          change_state_ms_ts = millis();
-          motor_PWM = 16;
-          motor_turn_left( motor_PWM );
-          reset_encoder_count();
-        }
-         // detect if stucked
-        if (is_stuck)
-        {
-          movement_state = MVSTATE_TRAPPED;
-          change_state_ms_ts = millis();
-          motor_reverse( motor_PWM );
-          break;
-        }
-       break;
-        
-      case MVSTATE_TRAPPED:
-        delay(2000);
-        if ( (l_dist > 40) || (r_dist > 40) )
-        {
-          motor_stop();
-          change_state_ms_ts = millis();
-          movement_state = MVSTATE_STOP;
-        }
-
-        break;
-      default:
-        display_dist("#######");
-        break;
-    }
-  }
-  }
+  prev_movement_state = movement_state;
+  movement_state = MVSTATE_PAUSE;
 }
 
-*/
+void resume_motor (void)
+{
+  movement_state = prev_movement_state;
+}
+
+void motor_trick(unsigned int clap_cmd)
+{
+  int i;
+  switch (clap_cmd)
+  {
+    case 1:
+      song_loop();
+      for ( i = 0 ; i < 8 ; i++ )
+      {
+        motor_reverse (40);
+        delay(500);
+        motor_turn_left(40);
+        delay(280);
+        motor_forward (40);
+        delay(500);
+      }
+      break;
+    case 2:
+      for ( i = 0 ; i < 4 ; i++ )
+      {
+        motor_forward (40);
+        delay(300);
+        motor_turn_left(40);
+        delay(300);
+        motor_forward (40);
+        delay(300);
+        motor_turn_right(40);
+        delay(300);
+      }
+      break;
+    case 3:
+      motor_PWM += 5;
+      break;
+    case 4:
+      motor_PWM -= 5;
+      break;
+    
+  }
+  I2C_RGB_LED(ALL_OFF);
+}
 

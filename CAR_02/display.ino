@@ -42,6 +42,10 @@ void dislplay_to_LCD( void )
         display_dist("  >>>");
         break;    
       case MVSTATE_DEAD_STOP:
+        display_dist("  -  ");
+        break;
+      case MVSTATE_PAUSE:
+        display_dist("PAUSE");
         break;
       default:
         display_dist("@@@@@");

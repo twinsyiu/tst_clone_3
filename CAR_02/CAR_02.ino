@@ -23,23 +23,26 @@ enum movement_st
   MVSTATE_KEEP_LEFT,
   MVSTATE_KEEP_RIGHT,
   MVSTATE_REV,
+  MVSTATE_PAUSE,
   MVSTATE_DEAD_STOP //MY for low voltage
 };
 
 enum LED_COLOR 
 {
-  R_BL = 1,
+  R_RD = 1,
   R_GN,
-  R_RD,
-  L_BL,
-  L_GN,
+  R_BL,
+  L_RD_R_RD,
+  L_RD_R_GN,
+  L_RD_R_BL,
+  L_GN_R_GN,
+  L_GN_R_BL,
+  L_BL_R_BL,
   L_RD,
+  L_GN,
+  L_BL,
   L_BL_R_GN,
   L_GN_R_RD,
-  L_RD_R_BL,
-  L_BL_R_BL,
-  L_GN_R_GN,
-  L_RD_R_RD,
   L_WH_R_WH,
   ALL_OFF
 };
@@ -66,6 +69,7 @@ void setup()
   lcd.clear(); // clear the lcd
   
   ultrasound_init();
+  TaskClapDetect_init();
   
   // Timer0 is already used for millis() - we'll just interrupt somewhere
   // in the middle and call the "Compare A" function below
@@ -97,23 +101,24 @@ ISR(TIMER1_COMPA_vect) // timer compare interrupt service routine
 }
 
 int f_dist, l_dist, r_dist;
-unsigned int movement_state;
+unsigned int movement_state = MVSTATE_STOP;
 
-unsigned int motor_PWM;
+unsigned int motor_PWM = 25;
 unsigned int l_motor_PWM, r_motor_PWM;
 
 void loop()
 {
-  movement_state = MVSTATE_STOP;
-  motor_PWM = 25;
+//  movement_state = MVSTATE_STOP;
+//  motor_PWM = 25;
   
-  while (1)
-  {
+//  while (1)
+//  {
     dislplay_to_LCD();
     motion_handler();
     motion_stuck_handler();
     check_battery_hdlr();
-  }
+    clap_cmd_hdlr();
+//  }
 }
 
 // Interrupt is called on every milli-second 
