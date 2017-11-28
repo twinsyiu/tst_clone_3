@@ -164,23 +164,23 @@ void motion_handler(void)
   {
     case MVSTATE_TURN_RIGHT:
     case MVSTATE_TURN_LEFT:
-      if ( f_dist < 40 )
+      if ( f_dist < 80 )
       {
-        // speed up the wick up time
-        next_mtr_state_time_ms = current_time + 100;
+        // speed up the wake up time
+        next_mtr_state_time_ms = current_time + 300;
         return;
       }
-      // else f_dist >= 40      
+      // else f_dist >= 80      
       movement_state = MVSTATE_GO_FWD;
       motor_forward( motor_PWM );
       break;
 
     case MVSTATE_REV:
-      if ( f_dist < 40 || ( l_dist < 35 && r_dist < 35 ))
+      if ( f_dist < 80 || ( l_dist < 35 && r_dist < 35 ))
       {
         return;
       } 
-      // i.e. else ( f_dist >= 40 && ( l_dist >= 35 || r_dist >= 35 ))
+      // i.e. else ( f_dist >= 80 && ( l_dist >= 35 || r_dist >= 35 ))
 
       if ( r_dist > 35 )
       {
@@ -199,14 +199,14 @@ void motion_handler(void)
     case MVSTATE_STOP:
       l_motor_PWM = r_motor_PWM = motor_PWM; //MY for display_dist
 
-      if ( f_dist < 40 || ( l_dist < 35 && r_dist < 35 ) )
+      if ( f_dist < 50 || ( l_dist < 35 && r_dist < 35 ) )
       {
         movement_state = MVSTATE_REV;
         motor_reverse( motor_PWM );
         return;
       }
         
-      if ( f_dist > 40)
+      if ( f_dist > 50)
       {
         movement_state = MVSTATE_GO_FWD;
         motor_forward( motor_PWM );
@@ -246,11 +246,21 @@ void motion_handler(void)
       { // i.e. only the left side is closing to a wall
         // Keeping Right
         movement_state = MVSTATE_KEEP_RIGHT;
+
+        //Motor drive to RIGHT
+        l_motor_PWM = motor_PWM - 3;    // slow down the left
+        r_motor_PWM = motor_PWM - 8;    // further slow down the right
+        motor_chg_dir(  l_motor_PWM,  r_motor_PWM );
       }
       else if ( r_dist < 35 )
       { // i.e. only the right side is closing to a wall
         //Keeping Left
         movement_state = MVSTATE_KEEP_LEFT;
+
+        //Motor drive to LEFT
+        r_motor_PWM = motor_PWM - 3;    // slow down the right
+        l_motor_PWM = motor_PWM - 8;    // further slow down the left
+        motor_chg_dir(  l_motor_PWM,  r_motor_PWM );
       }            
       break;
         
@@ -261,11 +271,6 @@ void motion_handler(void)
         motor_stop();
         return;
       }
-
-      //Motor drive to LEFT
-      r_motor_PWM = motor_PWM - 3;    // slow down the right
-      l_motor_PWM = motor_PWM - 8;    // further slow down the left
-      motor_chg_dir(  l_motor_PWM,  r_motor_PWM );
 
       if ( r_dist > 35 )
       {
@@ -282,11 +287,6 @@ void motion_handler(void)
         motor_stop();
         return;
       }
-
-      //Motor drive to RIGHT
-      l_motor_PWM = motor_PWM - 3;    // slow down the left
-      r_motor_PWM = motor_PWM - 8;    // further slow down the right
-      motor_chg_dir(  l_motor_PWM,  r_motor_PWM );
 
       if ( l_dist > 35 )
       {
