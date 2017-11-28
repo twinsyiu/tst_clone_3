@@ -4,7 +4,6 @@
 #ifdef SERIAL_DBG_ON    
 #undef SERIAL_DBG_ON    
 #endif
-//#define SERIAL_DBG_ON    
 
 #define CLAPSTAT_IDLE         0
 #define CLAPSTAT_DEBOUNCE     1
@@ -182,13 +181,10 @@ void clap_cmd_hdlr( void )
             clap_valid_cnt = 0;
             
             // clap_cmd is valid, display RGB to confirm the Confirmation clap is received
-            I2C_RGB_LED(clap_cmd + 3);
+            I2C_RGB_LED(clap_cmd + 4);
 
             clap_cmd_rdy_f = true;
-            // take action at here <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< !!!!
-            // create a motor task and drive the motor according to the cmd
-            //motion_control(clap_cmd);
-            put_motor_pause();
+            // take action at here <<<<<<<<<<<<<<<<<<<<<<<< PLAY SOME TRICKS
             motor_trick(clap_cmd);
             resume_motor();
             cmdr_state = CMDRSTAT_STDBY;
@@ -209,7 +205,6 @@ void clap_cmd_hdlr( void )
             cmdr_state = CMDRSTAT_STDBY;
             clap_valid_cnt = 0;
             clap_cmd_rdy_f = false;
-//            resume_motor();
           }
           next_clap_cmd_time_ms = current_time + 250;
         }

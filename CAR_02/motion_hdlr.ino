@@ -46,6 +46,7 @@ void motion_stuck_handler(void)
       break;
   }
 
+  // if either one wheel has less than 5 slots changes, then it is stucked
   if ( encoder.L_E_count_1s < 5 or encoder.R_E_count_1s < 5 )
   {
     switch (movement_state)
@@ -53,24 +54,36 @@ void motion_stuck_handler(void)
       case MVSTATE_GO_FWD:
       case MVSTATE_KEEP_LEFT:
       case MVSTATE_KEEP_RIGHT:
+        
         if (( current_time - last_motion_stuck_time ) > 2000 )
-        {
+        { // if previous stuck was older than 2 seconds, ie a non-frequent stuck situation, just do a simple reverse
           motor_reverse(motor_PWM * 0.8);
           l_motor_PWM = r_motor_PWM = motor_PWM * 0.8;
           movement_state = MVSTATE_REV;
           last_motion_stuck_time = current_time;
-          break;
+          break;    // this break the switch statement and skip the rest
         }
-        // its requent stuck, special treatment to be executed
+        // else it is a frequent stuck, previous stuck is within 2 seconds old, special treatment to be executed
         display_dist(" <^>S");
-        // else it has been stuck from previous opposite motion
+
         motor_reverse(motor_PWM * 0.8);
         movement_state = MVSTATE_REV;
-        delay(500); // allow room to turn
-        motor_turn_left(motor_PWM * 0.6);
-        movement_state = MVSTATE_TURN_LEFT;
-        delay(500); // make sure enough turn
+        delay(500); // delay to ensure time to move
+
+        if ( movement_state == MVSTATE_KEEP_LEFT )
+        {
+          motor_turn_right(motor_PWM * 0.6);
+          movement_state = MVSTATE_TURN_RIGHT;
+        }
+        else
+        {
+          motor_turn_left(motor_PWM * 0.6);
+          movement_state = MVSTATE_TURN_LEFT;
+        }
+        delay(500); // delay to ensure time to turn
         l_motor_PWM = r_motor_PWM = motor_PWM;
+
+        // resume forward mode
         motor_forward(motor_PWM);
         movement_state = MVSTATE_GO_FWD;
         last_motion_stuck_time = current_time;
@@ -85,16 +98,18 @@ void motion_stuck_handler(void)
           last_motion_stuck_time = current_time;
           break;
         }
-        // its requent stuck, special treatment to be executed
+        // else it is a frequent stuck, special treatment to be executed
         display_dist("  V S");
         // else it has been stuck from previous opposite motion
         motor_forward(motor_PWM * 0.8);
         movement_state = MVSTATE_GO_FWD;
-        delay(500); // allow room to turn
+        delay(500); // delay to ensure time to move
         motor_turn_left(motor_PWM * 0.6);
         movement_state = MVSTATE_TURN_LEFT;
-        delay(500); // make sure enough turn
+        delay(500); // delay to ensure time to turn
         l_motor_PWM = r_motor_PWM = motor_PWM;
+        
+        // resume reverse mode
         motor_reverse(motor_PWM);
         movement_state = MVSTATE_REV;
         last_motion_stuck_time = current_time;
@@ -148,14 +163,10 @@ void motion_handler(void)
   switch (movement_state)
   {
     case MVSTATE_TURN_RIGHT:
-//      I2C_RGB_LED(R_BL);
-//      goto L_R_TURN;
     case MVSTATE_TURN_LEFT:
-//      I2C_RGB_LED(L_BL);
-//L_R_TURN:
       if ( f_dist < 40 )
       {
-        // adjust the wick up time
+        // speed up the wick up time
         next_mtr_state_time_ms = current_time + 100;
         return;
       }
@@ -165,10 +176,8 @@ void motion_handler(void)
       break;
 
     case MVSTATE_REV:
-//      I2C_RGB_LED(L_BL_R_BL);
       if ( f_dist < 40 || ( l_dist < 35 && r_dist < 35 ))
       {
-        // motor_reverse( motor_PWM );
         return;
       } 
       // i.e. else ( f_dist >= 40 && ( l_dist >= 35 || r_dist >= 35 ))
@@ -178,21 +187,16 @@ void motion_handler(void)
         //Turn Right 100ms
         movement_state = MVSTATE_TURN_RIGHT;
         motor_turn_right( motor_PWM*0.8);
-        // adjust the wick up time
-        // next_mtr_state_time_ms = current_time + 100;
       }
       else
       {
         //Turn Left 100ms
         movement_state = MVSTATE_TURN_LEFT;
         motor_turn_left( motor_PWM*0.8);
-        // adjust the wick up time
-        // next_mtr_state_time_ms = current_time + 100;
       }  
       break;
 
     case MVSTATE_STOP:
-//      I2C_RGB_LED(ALL_OFF);
       l_motor_PWM = r_motor_PWM = motor_PWM; //MY for display_dist
 
       if ( f_dist < 40 || ( l_dist < 35 && r_dist < 35 ) )
@@ -212,22 +216,17 @@ void motion_handler(void)
         //Turn Right 100ms
         movement_state = MVSTATE_TURN_RIGHT;
         motor_turn_right( motor_PWM*0.8);
-        // adjust the wick up time
-        // next_mtr_state_time_ms = current_time + 100;
       }
       else  // if ( l_dist > 35 )
       {
         //Turn Left 100ms
         movement_state = MVSTATE_TURN_LEFT;
         motor_turn_left( motor_PWM*0.8);
-        // adjust the wick up time
-        // next_mtr_state_time_ms = current_time + 100;
       }  
 
       break;
 
     case MVSTATE_GO_FWD:
-//      I2C_RGB_LED(L_WH_R_WH);
       FWD_straight_adj();
       
       if ( f_dist < 35 || ( l_dist < 25 && r_dist < 25 ) )
@@ -256,7 +255,6 @@ void motion_handler(void)
       break;
         
     case MVSTATE_KEEP_LEFT: // due to r_dist < 35
-//      I2C_RGB_LED(L_RD);
       if ( f_dist < 35)
       {
         movement_state = MVSTATE_STOP;
@@ -278,7 +276,6 @@ void motion_handler(void)
       break;
         
     case MVSTATE_KEEP_RIGHT: //due to l_dist < 35
-//      I2C_RGB_LED(R_RD);
       if ( f_dist < 35)
       {
         movement_state = MVSTATE_STOP;
@@ -303,15 +300,14 @@ void motion_handler(void)
       I2C_RGB_LED(ALL_OFF);
       lcd.setCursor(0,0); // set the cursor to column 0, line 0
       lcd.print("LOW VOLTAGE<9.5V"); // Print < to the LCD.
-//        lcd.setCursor(0,14); // set the cursor to column 0, line 0
-//        lcd.print(analogRead(A0)*5*3/1023); // Print < to the LCD.        
+      lcd.setCursor(0,14); // set the cursor to column 0, line 0
+      lcd.print(analogRead(A0)*5*3/1023); // Print < to the LCD.        
       lcd.setCursor(0,1); // set the cursor to column 0, line 1
       lcd.print(" MOTOR DEAD STOP"); // Print < to the LCD.
       motor_stop();
       break;    
       
     case MVSTATE_PAUSE:  
-      //I2C_RGB_LED(ALL_OFF);
       motor_stop();
       break;    
     }
@@ -335,7 +331,7 @@ void motor_trick(unsigned int clap_cmd)
   int i;
   switch (clap_cmd)
   {
-    case 1:
+    case 1:       // looks like drawing a Southern Cross pattern
       song_loop();
       for ( i = 0 ; i < 8 ; i++ )
       {
@@ -347,7 +343,7 @@ void motor_trick(unsigned int clap_cmd)
         delay(500);
       }
       break;
-    case 2:
+    case 2:       // forward Zig-Zag pattern
       for ( i = 0 ; i < 4 ; i++ )
       {
         motor_forward (40);

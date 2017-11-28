@@ -48,7 +48,7 @@ void Task_Speedo( void *pvParameters __attribute__((unused)) )  // This is a Tas
         }
       }
       while ( (ultr_dist[ulta_id] <= 0) && (( millis() - start_trig_ts_ms ) < 45 ) );    // 
-      Serial.print(ulta_id);Serial.print(":");Serial.print(start_trig_ts_ms);Serial.print(" --ult-- ");Serial.println(millis());
+      // Serial.print(ulta_id);Serial.print(":");Serial.print(start_trig_ts_ms);Serial.print(" --ult-- ");Serial.println(millis());
   
     }
     

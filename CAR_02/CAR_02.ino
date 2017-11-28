@@ -6,11 +6,6 @@
 #include <Wire.h>   // use I2C library
 #include <LiquidCrystal_I2C.h> // // use LiquidCrystal_I2C FC-113, install lib required
 
-// remove the remark to enable real battery test
-// #define REAL_BATTERY_EXIST
-
-//const int buzzerPin = 9;
-
 // initialize the library with the numbers of the interface pins
 LiquidCrystal_I2C lcd(0x27,16,2); // set the LCD address to 0x27 for a 16 chars and 2 line display
 
@@ -29,9 +24,11 @@ enum movement_st
 
 enum LED_COLOR 
 {
-  R_RD = 1,
+  R_WH = 1,
+  R_RD,
   R_GN,
   R_BL,
+  L_RD_R_WH,
   L_RD_R_RD,
   L_RD_R_GN,
   L_RD_R_BL,
@@ -93,6 +90,7 @@ void setup()
     ,  2  // Priority, with 1 being the highest, and 4 being the lowest.
     ,  NULL );
 
+  I2C_RGB_LED(ALL_OFF);
 
 }
 
@@ -108,17 +106,11 @@ unsigned int l_motor_PWM, r_motor_PWM;
 
 void loop()
 {
-//  movement_state = MVSTATE_STOP;
-//  motor_PWM = 25;
-  
-//  while (1)
-//  {
     dislplay_to_LCD();
     motion_handler();
     motion_stuck_handler();
     check_battery_hdlr();
     clap_cmd_hdlr();
-//  }
 }
 
 // Interrupt is called on every milli-second 
@@ -144,6 +136,11 @@ float get_battery_voltage (void)
 
 void battery_low_hdlr (float in_volt)
 {
+  if (in_volt < 0.2)
+  { // ie, it is powered by USB, so skip the rest of the test
+    return;
+  }
+  
   if (in_volt < 9.5)
   {
     lcd.init(); //initialize the lcd
@@ -156,9 +153,7 @@ void battery_low_hdlr (float in_volt)
     lcd.setCursor(6,1); // set the cursor to column 0, line 0
     lcd.print("Volt"); // Print l_dist to the LCD.
 
-#ifdef REAL_BATTERY_EXIST
     while (1) {};
-#endif
   }
 }
 
@@ -177,9 +172,7 @@ void check_battery_hdlr (void)
   // A0 pin is connected to the voltage divider of the terminal voltage
   // full scale 1023 is representing 15V DC
   vcc_volt = get_battery_voltage();
-#ifdef REAL_BATTERY_EXIST
   battery_low_hdlr( vcc_volt );
-#endif
 
   return;
 }

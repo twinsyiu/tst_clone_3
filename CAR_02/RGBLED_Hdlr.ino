@@ -5,9 +5,8 @@ uint8_t exp_board_address;
 void Init_RGBLED ( void )
 {
   //I2C
-//  Wire.begin(); // Arduino needs (SDA=A4,SCL=A5)
+  //  Wire.begin(); // Arduino needs (SDA=A4,SCL=A5)
   exp_board_address = 0x20;    // I2C address of the IO-Expension board
-//  uint8_t bits = B11111111; // All bits off
   I2C_RGB_LED(ALL_OFF);
 }
 
@@ -35,6 +34,9 @@ void I2C_RGB_LED ( int mode )
     case R_BL:
           bitClear(bits,4); //Blue LED R
           break;
+    case R_WH:
+          bits = B11100011; //White R
+          break;
     case L_RD_R_RD:
           bitClear(bits,2); //red R
           bitClear(bits,5); //red L
@@ -45,8 +47,12 @@ void I2C_RGB_LED ( int mode )
           break;          
     case L_RD_R_BL:         
           bitClear(bits,5); //Red L
-          bitClear(bits,4); //blue LED R
+          bitClear(bits,4); //White R
           break;          
+    case L_RD_R_WH:
+          bits = B11100011; //Blue LED R
+          bitClear(bits,5); //Red L
+          break;
     case L_GN_R_GN:
           bitClear(bits,3); //green R
           bitClear(bits,6); //green L
@@ -87,7 +93,7 @@ void I2C_RGB_LED ( int mode )
   WriteIo(bits);
 }
 
-
+/*
 void flash_RGB(int ON_LED, int flash_Number) // ON_LED for which LED, flash_Number for how many flash
 {
   uint8_t bits = B11111111; // All bits off
@@ -100,4 +106,4 @@ void flash_RGB(int ON_LED, int flash_Number) // ON_LED for which LED, flash_Numb
     vTaskDelay(25);
   }
 }
-
+*/
