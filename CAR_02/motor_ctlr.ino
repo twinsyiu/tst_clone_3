@@ -37,7 +37,7 @@ void motor_drive_sp( unsigned int L_R, unsigned int Fwd_Rev, unsigned int PWM_Sp
   {
     corrected_Fwd_Rev = !Fwd_Rev;
   }
-  
+
   // this function will run the motors in both directions at a fixed speed
   digitalWrite(motor_io[L_R][DIR_IO_IDX], corrected_Fwd_Rev);      //  Dir
   if ( corrected_Fwd_Rev )
@@ -53,8 +53,8 @@ void motor_drive_sp( unsigned int L_R, unsigned int Fwd_Rev, unsigned int PWM_Sp
 
 void motor_forward( unsigned int PWM )
 {
-  #ifdef DEBUG 
-  Serial.print("motor_forward PWM = ");Serial.println(PWM); 
+  #ifdef DEBUG
+  Serial.print("motor_forward PWM = ");Serial.println(PWM);
   #endif
   motor_drive_sp( MOTOR_R, DIR_FWD, PWM );
   motor_drive_sp( MOTOR_L, DIR_FWD, PWM );
@@ -62,7 +62,7 @@ void motor_forward( unsigned int PWM )
 
 void motor_stop( void )
 {
-  #ifdef DEBUG 
+  #ifdef DEBUG
   Serial.println("motor_stop IMMEDIATELY !!!");
   #endif
   motor_drive_sp( MOTOR_R, DIR_FWD, 0 );
@@ -71,7 +71,7 @@ void motor_stop( void )
 
 void motor_reverse( unsigned int PWM )
 {
-  #ifdef DEBUG 
+  #ifdef DEBUG
   Serial.print("motor_reverse PWM = ");Serial.println(PWM);
   #endif
   motor_drive_sp( MOTOR_R, DIR_REV, PWM );
@@ -80,7 +80,7 @@ void motor_reverse( unsigned int PWM )
 
 void motor_turn_left( unsigned int PWM )
 {
-  #ifdef DEBUG 
+  #ifdef DEBUG
   Serial.print("motor_turn_left PWM = ");Serial.println(PWM);
   #endif
   motor_drive_sp( MOTOR_R, DIR_FWD, PWM );
@@ -89,7 +89,7 @@ void motor_turn_left( unsigned int PWM )
 
 void motor_turn_right( unsigned int PWM )
 {
-  #ifdef DEBUG 
+  #ifdef DEBUG
   Serial.print("motor_turn_right PW = ");Serial.println(PWM);
   #endif
   motor_drive_sp( MOTOR_R, DIR_REV, PWM );
@@ -103,36 +103,3 @@ void motor_chg_dir( unsigned int l_motor_PWM, unsigned int r_motor_PWM )
   motor_drive_sp( MOTOR_L, DIR_FWD, l_motor_PWM );
 }
 
-/*
-void motor_right_fwd( unsigned int PWM )
-{
-  #ifdef DEBUG 
-  Serial.print("motor_right_fwd PWM = ");Serial.println(PWM);
-  #endif
-  motor_drive_sp( MOTOR_R, DIR_FWD, PWM );
-}
-
-void motor_right_rev( unsigned int PWM )
-{
-  #ifdef DEBUG 
-  Serial.print("motor_right_rev PWM = ");Serial.println(PWM);
-  #endif
-  motor_drive_sp( MOTOR_R, DIR_REV, PWM );
-}
-
-void motor_left_fwd( unsigned int PWM )
-{
-  #ifdef DEBUG 
-  Serial.print("motor_left_fwd PWM = ");Serial.println(PWM);
-  #endif
-  motor_drive_sp( MOTOR_L, DIR_FWD, PWM );
-}
-
-void motor_left_rev( unsigned int PWM )
-{
-  #ifdef DEBUG 
-  Serial.print("motor_left_rev PWM = ");Serial.println(PWM);
-  #endif
-  motor_drive_sp( MOTOR_L, DIR_REV, PWM );
-}
-*/

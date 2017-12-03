@@ -19,7 +19,7 @@ unsigned int R_E_count_1s=0;
 void encoder_update()
 {
   if ( slot_L )   // slot_L is 1 ( ie not 0 )
-  {
+  { // capture the falling edge change
     if (digitalRead(ENC_L_PIN)==0)
     {
       slot_L=0;
@@ -28,14 +28,14 @@ void encoder_update()
   else  // slot_L is 0
   {
     if (digitalRead(ENC_L_PIN))
-    {
+    { // the rising edg is detected
       l_slot_count++;       // increment the per second left-slot counter
       l_encoder_count++;
       slot_L=1;
     }
   }
 
-  // RIGHT ENCODER COUNTING ---------------------
+  // repeat on the RIGHT ENCODER -----------------------
   if ( slot_R )   // slot_R is 1 ( ie not 0 )
   {
     if (digitalRead(ENC_R_PIN)==0)
@@ -61,9 +61,9 @@ void encoder_update()
 //    Serial.print(" r_slot_count= ");Serial.println(r_slot_count);
     L_E_count_1s = l_slot_count ; // capture the per second left-slot counter
     R_E_count_1s = r_slot_count ; // capture the per second right-slot counter
-    
+
     l_slot_count = r_slot_count = 0; // clear both per second counters
-    
+
   }
 }
 
@@ -73,10 +73,10 @@ void reset_encoder_count()
   r_encoder_count = 0;
 }
 
-//
-// get_encoder() will put both encoder counter value to the caller supplied struct encoder;
-// it returns the diff between l and r encoder; ie l_encoder_count - r_encoder_count
-//
+/*
+ * get_encoder() will put both encoder counter value to the caller supplied struct encoder;
+ * it returns the diff between l and r encoder; ie l_encoder_count - r_encoder_count
+*/
 int get_encoder( encoder_Struct *encoder )
 {
   encoder->l_encoder_count = l_encoder_count;
@@ -86,7 +86,7 @@ int get_encoder( encoder_Struct *encoder )
 
   encoder->encoder_ts = millis();
   return ( l_encoder_count - r_encoder_count );
-  
+
 }
 
 

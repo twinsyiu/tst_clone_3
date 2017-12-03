@@ -1,16 +1,16 @@
-const int LCD_update_period_ms = 250;
+const int LCD_update_period_ms = 250;   // the LCD will be updated every 250ms
 unsigned long next_disp_time_ms;
 
 /*
  * dislplay_to_LCD() will display the corresponding sign of the movement state onto the LCD,
- * and the three ultrasound sensors measured distance to the obstacles;
+ * the three ultrasound sensors measured distance to the obstacles;
  * and the PWM (%) used on left and right motor
- * 
- * this function will be activated on every 250ms
+ *
+ * this function will be activated every 250ms, ie the LCD will be updated every 250ms
  */
 void dislplay_to_LCD( void )
 {
-  
+
   unsigned long current_time;
 
   current_time = millis();                // the millis() will role-over in 63 days (TODO if battery can last that long
@@ -22,25 +22,25 @@ void dislplay_to_LCD( void )
     {
       case MVSTATE_REV:
         display_dist("  V  ");
-        break;    
-      case MVSTATE_STOP:            
+        break;
+      case MVSTATE_STOP:
         display_dist("  0  ");
-        break;    
+        break;
       case MVSTATE_GO_FWD:
         display_dist("  ^  ");
-        break;    
+        break;
       case MVSTATE_KEEP_LEFT:
         display_dist("  |> ");
-        break;    
+        break;
       case MVSTATE_KEEP_RIGHT:
         display_dist(" <|  ");
-        break;    
+        break;
       case MVSTATE_TURN_LEFT:
         display_dist("<<<  ");
-        break;    
+        break;
       case MVSTATE_TURN_RIGHT:
         display_dist("  >>>");
-        break;    
+        break;
       case MVSTATE_DEAD_STOP:
         display_dist("  -  ");
         break;
@@ -49,7 +49,7 @@ void dislplay_to_LCD( void )
         break;
       default:
         display_dist("@@@@@");
-        break;    
+        break;
     }
   }
 }
@@ -68,22 +68,25 @@ void lcd_space_print (int dist)
     lcd.print(" ");
 }
 
+/*
+ * display_dist() will display the parameters to the predefined position
+ */
 void display_dist (const char * dir_str)
 {
   lcd.setCursor(0,0); // set the cursor to column 0, line 0
-  lcd.print("L"); 
+  lcd.print("L");
   lcd.setCursor(1,0); // set the cursor to column 1, line 0
   lcd.print(l_dist); // Print l_dist to the LCD.
   lcd_space_print (l_dist);
-  
+
   lcd.setCursor(6,0); // set the cursor to column 6, line 0
-  lcd.print("F"); 
+  lcd.print("F");
   lcd.setCursor(7,0); // set the cursor to column 7, line 0
   lcd.print(f_dist); // Print l_dist to the LCD.
   lcd_space_print (f_dist);
 
   lcd.setCursor(12,0); // set the cursor to column 12, line 0
-  lcd.print("R");  
+  lcd.print("R");
   lcd.setCursor(13,0); // set the cursor to column 13, line 0
   lcd.print(r_dist); // Print l_dist to the LCD.
   lcd_space_print (r_dist);
@@ -102,10 +105,13 @@ void display_dist (const char * dir_str)
 
 }
 
+/*
+ * display_battery() will display the battery voltage at predefined position on the LCD
+ */
 void display_battery (float vcc_volt)
 {
   lcd.init(); //initialize the lcd
-  lcd.backlight(); //open the backlight 
+  lcd.backlight(); //open the backlight
 
   lcd.setCursor(0,0); // set the cursor to column 0, line 0
   lcd.print("INIT BATTERY TEST"); // Print l_dist to the LCD.

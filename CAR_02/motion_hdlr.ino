@@ -21,26 +21,26 @@ void init_motion_handler(void)
  * It will check if the motors are running before taking actions.
  * Motor is considered stucked, if either of the wheel encoder returns less than 5 slots changes in the last one second.
  * The function will choose the opposite direction as the primary response if motor stucked is found.
- * If frequent motor stucked conditions (previous stuck are less than 2 seconds) are found 
- * then special treatment, and delay() is used as there is no better choice until the stuck condition is cleared 
+ * If frequent motor stucked conditions (previous stuck are less than 2 seconds) are found
+ * then special treatment, and delay() is used as there is no better choice until the stuck condition is cleared
  */
 void motion_stuck_handler(void)
 {
   unsigned long current_time;
   encoder_Struct encoder;
   static unsigned long last_motion_stuck_time;
-  
+
   current_time = millis();
   if ( current_time < next_motion_stuck_time_ms )
     return;
   next_motion_stuck_time_ms = current_time + 1000;    // per second motion stuck check
   get_encoder(&encoder);
 
+  // do nothing if motor movement is in either one of these states
   switch (movement_state)
   {
     case MVSTATE_STOP:
     case MVSTATE_DEAD_STOP:
-      // do nothing if motor is in either one of these two state.
       return;
     default:
       break;
@@ -54,7 +54,7 @@ void motion_stuck_handler(void)
       case MVSTATE_GO_FWD:
       case MVSTATE_KEEP_LEFT:
       case MVSTATE_KEEP_RIGHT:
-        
+
         if (( current_time - last_motion_stuck_time ) > 2000 )
         { // if previous stuck was older than 2 seconds, ie a non-frequent stuck situation, just do a simple reverse
           motor_reverse(motor_PWM * 0.8);
@@ -108,7 +108,7 @@ void motion_stuck_handler(void)
         movement_state = MVSTATE_TURN_LEFT;
         delay(500); // delay to ensure time to turn
         l_motor_PWM = r_motor_PWM = motor_PWM;
-        
+
         // resume reverse mode
         motor_reverse(motor_PWM);
         movement_state = MVSTATE_REV;
@@ -143,7 +143,7 @@ void motion_stuck_handler(void)
         last_motion_stuck_time = current_time;
         break;
 
-      
+
       default:
         break;
     }
@@ -153,7 +153,7 @@ void motion_stuck_handler(void)
 void motion_handler(void)
 {
   unsigned long current_time;
-  
+
   current_time = millis();
   if ( current_time < next_mtr_state_time_ms )
     return;
@@ -170,7 +170,7 @@ void motion_handler(void)
         next_mtr_state_time_ms = current_time + 300;
         return;
       }
-      // else f_dist >= 80      
+      // else f_dist >= 80
       movement_state = MVSTATE_GO_FWD;
       motor_forward( motor_PWM );
       break;
@@ -179,7 +179,7 @@ void motion_handler(void)
       if ( f_dist < 80 || ( l_dist < 35 && r_dist < 35 ))
       {
         return;
-      } 
+      }
       // i.e. else ( f_dist >= 80 && ( l_dist >= 35 || r_dist >= 35 ))
 
       if ( r_dist > 35 )
@@ -193,7 +193,7 @@ void motion_handler(void)
         //Turn Left 100ms
         movement_state = MVSTATE_TURN_LEFT;
         motor_turn_left( motor_PWM*0.8);
-      }  
+      }
       break;
 
     case MVSTATE_STOP:
@@ -205,7 +205,7 @@ void motion_handler(void)
         motor_reverse( motor_PWM );
         return;
       }
-        
+
       if ( f_dist > 50)
       {
         movement_state = MVSTATE_GO_FWD;
@@ -222,13 +222,13 @@ void motion_handler(void)
         //Turn Left 100ms
         movement_state = MVSTATE_TURN_LEFT;
         motor_turn_left( motor_PWM*0.8);
-      }  
+      }
 
       break;
 
     case MVSTATE_GO_FWD:
       FWD_straight_adj();
-      
+
       if ( f_dist < 35 || ( l_dist < 25 && r_dist < 25 ) )
       {
         movement_state = MVSTATE_STOP;
@@ -236,7 +236,7 @@ void motion_handler(void)
         return;
       }
 
-      // 
+      //
       if (l_dist < 35 && r_dist < 35 )
       { // reduce the forward speed if both left and right distance are less than 35,  ie running in a logn corridor
         l_motor_PWM = r_motor_PWM = motor_PWM * 0.8; //MY for display_dist
@@ -261,9 +261,9 @@ void motion_handler(void)
         r_motor_PWM = motor_PWM - 3;    // slow down the right
         l_motor_PWM = motor_PWM - 8;    // further slow down the left
         motor_chg_dir(  l_motor_PWM,  r_motor_PWM );
-      }            
+      }
       break;
-        
+
     case MVSTATE_KEEP_LEFT: // due to r_dist < 35
       if ( f_dist < 35)
       {
@@ -279,7 +279,7 @@ void motion_handler(void)
         movement_state = MVSTATE_GO_FWD;
       }
       break;
-        
+
     case MVSTATE_KEEP_RIGHT: //due to l_dist < 35
       if ( f_dist < 35)
       {
@@ -295,24 +295,24 @@ void motion_handler(void)
         movement_state = MVSTATE_GO_FWD;
       }
       break;
-        
-    case MVSTATE_DEAD_STOP:  
+
+    case MVSTATE_DEAD_STOP:
       I2C_RGB_LED(ALL_OFF);
       lcd.setCursor(0,0); // set the cursor to column 0, line 0
       lcd.print("LOW VOLTAGE<9.5V"); // Print < to the LCD.
       lcd.setCursor(0,14); // set the cursor to column 0, line 0
-      lcd.print(analogRead(A0)*5*3/1023); // Print < to the LCD.        
+      lcd.print(analogRead(A0)*5*3/1023); // Print < to the LCD.
       lcd.setCursor(0,1); // set the cursor to column 0, line 1
       lcd.print(" MOTOR DEAD STOP"); // Print < to the LCD.
       motor_stop();
-      break;    
-      
-    case MVSTATE_PAUSE:  
+      break;
+
+    case MVSTATE_PAUSE:
       motor_stop();
-      break;    
+      break;
     }
 
-  
+
 }
 
 void put_motor_pause (void)
@@ -362,7 +362,7 @@ void motor_trick(unsigned int clap_cmd)
     case 4:
       motor_PWM -= 5;
       break;
-    
+
   }
   I2C_RGB_LED(ALL_OFF);
 }
