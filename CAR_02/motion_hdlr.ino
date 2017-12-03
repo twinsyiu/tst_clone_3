@@ -150,6 +150,9 @@ void motion_stuck_handler(void)
   }
 }
 
+/*
+ * motion_handler() will be waken every 200ms
+ */
 void motion_handler(void)
 {
   unsigned long current_time;
